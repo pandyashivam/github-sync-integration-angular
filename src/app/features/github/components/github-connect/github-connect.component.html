@@ -1,0 +1,72 @@
+<mat-accordion class="github-accordion">
+  <mat-expansion-panel [expanded]="true">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <div class="github-header">
+          <img src="assets/img/github_icon.png" alt="GitHub" class="github-icon">
+          <span>Github</span>
+        </div>
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+
+    <div class="github-content">
+      <div class="connect-container">
+        <button mat-raised-button class="synced-github-data-button" (click)="githubSyncedData()" *ngIf="users.length > 0">
+         View Synced GitHub Data
+        </button>
+        <span *ngIf="!userAlreadyConnected">
+          <button mat-raised-button class="connect-button" (click)="connect()">
+            Connect
+          </button>
+          <h2 class="connect-title">Connect User to Github</h2>
+        </span>
+        <span *ngIf="userAlreadyConnected">
+          <h2 class="connect-title">User already connected to Github</h2>
+        </span>
+      </div>
+    </div>
+  </mat-expansion-panel>
+</mat-accordion>
+
+<div class="users-section" *ngIf="users && users.length > 0">
+  <h3>Connected GitHub Users</h3>
+  
+  <div class="user-accordion-wrapper" *ngFor="let user of users">
+    <mat-accordion>
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <div class="header-content">
+              <div class="left-content">
+                <img src="assets/img/github_icon.png" alt="GitHub" class="github-icon">
+                <span>{{ user.githubName }}</span>
+                <mat-icon class="verified-icon">verified</mat-icon>
+              </div>
+              
+              <div class="right-content">
+                <div class="sync-info">
+                  <div class="sync-status">
+                    {{ user.isSyncInProgress ? 'Sync in progress...' : 'Last synced: ' + ((user.lastSynced || user.LastSynced) | date:'medium')  }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        
+        <div class="user-content">
+          <div class="authenticated-container">
+            <div class="auth-info">
+              <div class="spacer"></div>
+              <div class="actions">
+                <button mat-raised-button class="remove-button" (click)="remove(user)">
+                  Remove <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </mat-expansion-panel>
+    </mat-accordion>
+  </div>
+</div>

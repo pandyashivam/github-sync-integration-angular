@@ -1,0 +1,89 @@
+<div class="github-data-container">
+  <div class="header-controls">
+    <mat-form-field appearance="outline" class="user-select">
+      <mat-label>Active GitHub Integrations</mat-label>
+      <mat-select [(ngModel)]="selectedUser" (selectionChange)="onUserChange()">
+        <mat-option *ngFor="let user of users" [value]="user">
+          {{ user.githubName || user.username }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="entity-select">
+      <mat-label>Entity Collection</mat-label>
+      <mat-select [(ngModel)]="selectedModel" (selectionChange)="onModelChange()" [disabled]="!selectedUser">
+        <mat-option *ngFor="let model of models" [value]="model.name">
+          {{ model.name }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <div class="search-container">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Search</mat-label>
+        <input matInput [(ngModel)]="searchText" 
+               placeholder="Search across all columns" 
+               (keyup)="onSearchInput()" 
+               (keyup.enter)="onSearch()">
+        <button *ngIf="searchText" matSuffix mat-icon-button aria-label="Clear" (click)="clearSearch()">
+          <mat-icon>close</mat-icon>
+        </button>
+        <mat-hint>Searches in all columns of all data types</mat-hint>
+      </mat-form-field>
+      <button mat-raised-button color="primary" (click)="onSearch()">
+        <mat-icon>search</mat-icon> Search
+      </button>
+      <button mat-button (click)="resetGrid()">
+        <mat-icon>refresh</mat-icon> Reset Grid
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-spinner">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+
+  <div class="grid-container" [hidden]="loading" [style]="{'height': gridHeight}">
+    <ag-grid-angular
+      class="ag-theme-alpine"
+      [rowData]="rowData"
+      [columnDefs]="columnDefs"
+      [defaultColDef]="defaultColDef"
+      [pagination]="false"
+      [rowSelection]="'multiple'"
+      [suppressRowClickSelection]="true"
+      [enableCellTextSelection]="true"
+      [suppressCellFocus]="true"
+      [domLayout]="'normal'"
+      [animateRows]="true"
+      (gridReady)="onGridReady($event)"
+      (filterChanged)="onFilterChanged($event)"
+      (sortChanged)="onSortChanged($event)">
+    </ag-grid-angular>
+
+    <mat-paginator 
+      [length]="totalRows"
+      [pageSize]="pageSize"
+      [pageSizeOptions]="pageSizeOptions"
+      [pageIndex]="pageIndex"
+      (page)="onPageChange($event)"
+      *ngIf="totalRows > 0">
+    </mat-paginator>
+  </div>
+
+  <div *ngIf="!loading && (!selectedUser || !selectedModel)" class="no-data-message">
+    <mat-card>
+      <mat-card-content>
+        <p>Please select a GitHub integration and an entity collection to view data.</p>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <div *ngIf="!loading && selectedUser && selectedModel && rowData.length === 0" class="no-results-message">
+    <mat-card>
+      <mat-card-content>
+        <p>No data found for the selected criteria.</p>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

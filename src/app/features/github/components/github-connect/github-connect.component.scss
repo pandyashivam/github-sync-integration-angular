@@ -1,0 +1,253 @@
+.github-accordion {
+  width: 100%;
+  max-width: 800px;
+  margin: 20px auto;
+}
+
+.users-section {
+  width: 100%;
+  max-width: 800px;
+  margin: 20px auto;
+}
+
+.github-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  
+  .github-icon {
+    width: 24px;
+    height: 24px;
+  }
+  
+  span {
+    font-weight: 500;
+  }
+  
+  .verified-icon {
+    color: #4CAF50;
+    margin-left: 4px;
+  }
+  
+  .history-icon {
+    color: #757575;
+    margin-left: 4px;
+  }
+}
+
+.header-content {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  
+  .left-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 140px;
+    
+    .github-icon {
+      width: 24px;
+      height: 24px;
+    }
+    
+    span {
+      font-weight: 500;
+    }
+    
+    .verified-icon {
+      color: #4CAF50;
+      margin-left: 4px;
+    }
+    
+    .history-icon {
+      color: #757575;
+      margin-left: 4px;
+    }
+  }
+  
+  .right-content {
+    margin-left: auto;
+    margin-right: 16px;
+    
+    .sync-info {
+      text-align: right;
+      font-size: 14px;
+      color: #757575;
+      
+      .admin-info {
+        margin-bottom: 4px;
+        color: #666;
+      }
+      
+      div {
+        margin-bottom: 2px;
+        white-space: nowrap;
+      }
+    }
+  }
+  
+  .custom-toggle-icon {
+    color: #757575;
+    transform: rotate(0deg);
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  ::ng-deep .mat-expanded & .custom-toggle-icon {
+    transform: rotate(180deg);
+  }
+}
+
+.sync-info {
+  text-align: right;
+  font-size: 14px;
+  color: #757575;
+  margin-left: auto;
+  
+  .admin-info {
+    margin-bottom: 4px;
+    color: #666;
+  }
+  
+  .sync-details {
+    div {
+      margin-bottom: 2px;
+    }
+  }
+}
+
+.github-content {
+  padding: 16px 8px;
+}
+
+.connect-container {
+  text-align: center;
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  
+  .connect-button {
+    margin-bottom: 16px;
+    min-width: 120px;
+    background-color: #4051B5;
+    color: #fff;
+  }
+
+  .synced-github-data-button {
+    margin-bottom: 16px;
+    min-width: 120px;
+    background-color: #6540b5;
+    color: #fff;
+  }
+  
+  .connect-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #4051B5;
+    margin: 0;
+  }
+}
+
+.user-accordion-wrapper {
+  margin-bottom: 16px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.user-content {
+  padding: 16px 8px;
+}
+
+.authenticated-container {
+  .auth-info {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    
+    .spacer {
+      flex: 1;
+    }
+    
+    .actions {
+      text-align: right;
+      
+      .remove-button {
+        background-color: #4051B5;
+        color: white;
+        
+        mat-icon {
+          margin-left: 4px;
+          font-size: 18px;
+          height: 18px;
+          width: 18px;
+          line-height: 18px;
+        }
+      }
+    }
+  }
+}
+
+::ng-deep .mat-expansion-panel {
+  border-radius: 4px !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1) !important;
+  
+  .mat-expansion-panel-header {
+    padding: 0 24px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+
+    &.mat-expanded {
+      height: 64px;
+    }
+  }
+  
+  .mat-expansion-panel-body {
+    padding: 0 16px 16px;
+  }
+}
+
+.sync-progress-container {
+  margin: 16px 0;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  
+  .sync-details {
+    margin-top: 12px;
+    
+    p {
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    
+    ul {
+      list-style-type: none;
+      padding-left: 0;
+      
+      li {
+        padding: 4px 0;
+        
+        &:before {
+          content: "•";
+          margin-right: 8px;
+          color: #4051B5;
+        }
+      }
+    }
+  }
+}
+
+.sync-status, .sync-progress {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.sync-progress {
+  color: #4051B5;
+  font-weight: 500;
+}

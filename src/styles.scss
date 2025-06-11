@@ -1,0 +1,47 @@
+/* You can add global styles to this file, and also import other style files */
+@import 'ag-grid-community/styles/ag-grid.css';
+@import 'ag-grid-community/styles/ag-theme-alpine.css';
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+
+.mat-snack-bar-container {
+    .mat-button {
+      min-width: unset !important;
+      color: #fff;
+    }
+  
+    border-radius: 2px;
+    box-sizing: content-box;
+    display: block;
+  
+    max-width: 568px !important;
+    min-width: 288px !important;
+    padding: 14px 24px;
+    min-height: 20px !important;
+    transform: translateY(100%) translateY(24px);
+  }
+  
+  .mat-mdc-snack-bar-container.success {
+    .mdc-snackbar__surface {
+      background: #34a853;
+      color: #ffffff;
+    }
+  
+  }
+  
+  .mat-mdc-snack-bar-container.error {
+    .mdc-snackbar__surface {
+      background: #ea4335;
+      color: #ffffff;
+    }
+  }
+  
+  .mat-mdc-snack-bar-container.warning {
+    .mdc-snackbar__surface {
+      background: #fbbc05;
+      color: #ffffff;
+    }
+  }
+  
