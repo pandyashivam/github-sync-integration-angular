@@ -2,13 +2,11 @@ import { Injectable } from '@angular/core';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { Observable } from 'rxjs';
 
-// Import additional modules needed for ConfirmDialogContent
 import { Component, Inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { CommonModule } from '@angular/common';
 
-// Internal component for the dialog
 interface ConfirmDialogData {
   title: string;
   message: string;
@@ -60,15 +58,6 @@ class ConfirmDialogContent {
 export class DialogService {
   constructor(private dialog: MatDialog) {}
 
-  /**
-   * Open a confirmation dialog
-   * @param title Dialog title
-   * @param message Message to display
-   * @param confirmText Text for confirm button
-   * @param cancelText Text for cancel button
-   * @param isDestructive Whether this is a destructive action (red styling)
-   * @returns Observable that resolves to true if confirmed, false otherwise
-   */
   confirm(
     title: string,
     message: string,
@@ -76,7 +65,6 @@ export class DialogService {
     cancelText: string = 'Cancel',
     isDestructive: boolean = false
   ): Observable<boolean> {
-    // Create the dialog dynamically
     const dialogRef = this.dialog.open(ConfirmDialogContent, {
       width: '400px',
       data: {
