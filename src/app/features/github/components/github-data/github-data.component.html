@@ -56,6 +56,8 @@
       [suppressCellFocus]="true"
       [domLayout]="'normal'"
       [animateRows]="true"
+      [rowHeight]="35"
+      [autoSizeStrategy]="autoSizeStrategy"
       (gridReady)="onGridReady($event)"
       (filterChanged)="onFilterChanged($event)"
       (sortChanged)="onSortChanged($event)">

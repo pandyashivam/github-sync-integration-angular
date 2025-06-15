@@ -11,7 +11,8 @@ import {
   SortChangedEvent,
   IFilterOptionDef,
   TextFilterModel,
-  DateFilterModel
+  DateFilterModel,
+  ValueFormatterParams
 } from 'ag-grid-community';
 import { GithubService, GithubUser, ModelInfo } from '../../service/github.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -23,6 +24,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { Subject, debounceTime } from 'rxjs';
+import { AvatarCellComponent } from '../avatar-cell/avatar-cell.component';
 
 @Component({
   selector: 'app-github-data',
@@ -39,7 +41,7 @@ import { Subject, debounceTime } from 'rxjs';
     MatIconModule,
     MatCardModule,
     MatProgressSpinnerModule,
-    MatPaginatorModule
+    MatPaginatorModule,
   ],
   templateUrl: './github-data.component.html',
   styleUrl: './github-data.component.scss'
@@ -47,6 +49,10 @@ import { Subject, debounceTime } from 'rxjs';
 export class GithubDataComponent implements OnInit {
   @ViewChild(AgGridAngular) agGrid!: AgGridAngular;
   
+  autoSizeStrategy: any = {
+    type: 'fitCellContents',
+    defaultMinWidth: 200
+  };
   users: GithubUser[] = [];
   models: ModelInfo[] = [];
   selectedUser: GithubUser | null = null;
@@ -253,7 +259,18 @@ export class GithubDataComponent implements OnInit {
         this.totalRows = response.totalRecords;
         this.rowData = response.data;
         
-        this.columnDefs = response.fields.map(field => {
+        this.columnDefs = response.fields
+          .filter(field => {
+            // Skip fields that are complex objects based on first row's data
+            if (this.rowData.length > 0) {
+              const firstRowValue = this.rowData[0][field.field];
+              if (firstRowValue && typeof firstRowValue === 'object' && !(firstRowValue instanceof Date)) {
+                return false;
+              }
+            }
+            return true;
+          })
+          .map(field => {
           const colDef: ColDef = {
             field: field.field,
             headerName: this.formatHeaderName(field.field),
@@ -261,7 +278,17 @@ export class GithubDataComponent implements OnInit {
             floatingFilter: true
           };
           
-          if (field.type === 'string') {
+          // Check if field is an avatar URL field
+          const fieldName = field.field.toLowerCase();
+          if (fieldName === 'avatar_url' || 
+              fieldName === 'avatarurl' || 
+              fieldName === 'avatar' || 
+              fieldName.includes('avatar_url') || 
+              fieldName.includes('avatarurl')) {
+            colDef.cellRenderer = AvatarCellComponent;
+            colDef.width = 80;
+            colDef.flex = 0;
+          } else if (field.type === 'string') {
             colDef.filter = 'agTextColumnFilter';
             colDef.filterParams = {
               filterOptions: [
@@ -336,6 +363,16 @@ export class GithubDataComponent implements OnInit {
             colDef.filterParams = {
               buttons: ['apply', 'reset'],
               closeOnApply: true
+            };
+            // Add value formatter to handle potential objects
+            colDef.valueFormatter = (params: ValueFormatterParams) => {
+              if (params.value === null || params.value === undefined) {
+                return '';
+              }
+              if (typeof params.value === 'object' && !(params.value instanceof Date)) {
+                return '';  // Don't display objects
+              }
+              return params.value;
             };
           }
           

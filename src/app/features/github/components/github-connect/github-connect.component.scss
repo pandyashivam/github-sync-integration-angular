@@ -251,3 +251,21 @@
   color: #4051B5;
   font-weight: 500;
 }
+
+.sync-button {
+  margin-left: 5px;
+  color: #3f51b5;
+  
+  &[disabled] {
+    color: rgba(0, 0, 0, 0.26);
+    
+    mat-icon {
+      animation: spin 2s linear infinite;
+    }
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

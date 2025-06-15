@@ -41,6 +41,9 @@
                 <img src="assets/img/github_icon.png" alt="GitHub" class="github-icon">
                 <span>{{ user.githubName }}</span>
                 <mat-icon class="verified-icon">verified</mat-icon>
+                <button mat-icon-button class="sync-button" (click)="syncUser(user)" [disabled]="user.isSyncInProgress">
+                  <mat-icon>sync</mat-icon>
+                </button>
               </div>
               
               <div class="right-content">

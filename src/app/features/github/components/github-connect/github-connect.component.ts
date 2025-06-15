@@ -146,6 +146,33 @@ export class GithubConnectComponent implements OnInit, OnDestroy {
    
   }
   
+  syncUser(user: GithubUser): void {
+    if (!user || !user._id) {
+      this.snackBarService.showError('Cannot sync user: Invalid user data');
+      return;
+    }
+
+    this.snackBarService.showInfo(`Syncing GitHub data for ${user.githubName}...`);
+    user.isSyncInProgress = true;
+    
+    this.githubService.syncUser(user._id).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.snackBarService.showSuccess('GitHub sync initiated successfully');
+        } else {
+          user.isSyncInProgress = false;
+          this.snackBarService.showError('Failed to initiate GitHub sync: ' + response.message);
+        }
+      },
+      error: (error) => {
+        user.isSyncInProgress = false;
+        console.error('Error syncing GitHub data:', error);
+        this.snackBarService.showError('Failed to initiate GitHub sync: ' + 
+          (error.error?.message || 'Unknown error'));
+      }
+    });
+  }
+  
   githubSyncedData() {
     this.router.navigate(['/github/data']);
   }

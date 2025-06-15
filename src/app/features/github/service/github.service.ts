@@ -107,4 +107,8 @@ export class GithubService {
   removeGithubUser(userId: string): Observable<RemoveUserResponse> {
     return this.httpService.delete<RemoveUserResponse>(`/auth/github/user/${userId}`);
   }
+  
+  syncUser(userId: string): Observable<any> {
+    return this.httpService.post(`/auth/github/sync/${userId}`, {});
+  }
 }
