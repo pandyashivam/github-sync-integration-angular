@@ -1,5 +1,39 @@
 <div class="github-data-container">
-  <div class="header-controls">
+  <div *ngIf="isUserDetailMode && userDetails" class="user-detail-view">
+    <div class="user-detail-header">
+      <h4 class="user-detail-title">
+        <img [src]="userDetails.userDetails.avatar_url" alt="User Avatar" class="user-avatar" />
+        <span>{{userDetails.userDetails.login}}</span>
+        <span class="user-detail-type">({{userDetails.modelName}})</span>
+      </h4>
+      <div class="user-detail-info">
+        <p>Total {{userDetails.modelName}}s: {{totalRows}}</p>
+      </div>
+    </div>
+    
+    <!-- Search for user detail view -->
+    <div class="search-container">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Search</mat-label>
+        <input matInput [(ngModel)]="searchText" 
+               placeholder="Search across all columns" 
+               (keyup)="onSearchInput()" 
+               (keyup.enter)="onSearch()">
+        <button *ngIf="searchText" matSuffix mat-icon-button aria-label="Clear" (click)="clearSearch()">
+          <mat-icon>close</mat-icon>
+        </button>
+        <mat-hint>Searches in all columns</mat-hint>
+      </mat-form-field>
+      <button mat-raised-button color="primary" (click)="onSearch()">
+        <mat-icon>search</mat-icon> Search
+      </button>
+      <button mat-button (click)="resetGrid()">
+        <mat-icon>refresh</mat-icon> Reset Grid
+      </button>
+    </div>
+  </div>
+
+  <div class="header-controls" *ngIf="!isUserDetailMode">
     <mat-form-field appearance="outline" class="user-select">
       <mat-label>Active GitHub Integrations</mat-label>
       <mat-select [(ngModel)]="selectedUser" (selectionChange)="onUserChange()">
@@ -73,7 +107,7 @@
     </mat-paginator>
   </div>
 
-  <div *ngIf="!loading && (!selectedUser || !selectedModel)" class="no-data-message">
+  <div *ngIf="!loading && !isUserDetailMode && (!selectedUser || !selectedModel)" class="no-data-message">
     <mat-card>
       <mat-card-content>
         <p>Please select a GitHub integration and an entity collection to view data.</p>
@@ -81,10 +115,18 @@
     </mat-card>
   </div>
 
-  <div *ngIf="!loading && selectedUser && selectedModel && rowData.length === 0" class="no-results-message">
+  <div *ngIf="!loading && !isUserDetailMode && selectedUser && selectedModel && rowData.length === 0" class="no-results-message">
     <mat-card>
       <mat-card-content>
         <p>No data found for the selected criteria.</p>
+      </mat-card-content>
+    </mat-card>
+  </div>
+  
+  <div *ngIf="!loading && isUserDetailMode && (!userDetails || userDetailItems.length === 0)" class="no-results-message">
+    <mat-card>
+      <mat-card-content>
+        <p>No user details found for the selected user.</p>
       </mat-card-content>
     </mat-card>
   </div>

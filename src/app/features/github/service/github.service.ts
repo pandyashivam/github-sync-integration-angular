@@ -62,6 +62,33 @@ export interface RemoveUserResponse {
   error?: string;
 }
 
+export interface UserDetails {
+  success: boolean;
+  count: number;
+  totalPages: number;
+  currentPage: number;
+  totalRecords: number;
+  userDetails: {
+    login: string;
+    id: number;
+    avatar_url: string;
+    [key: string]: any;
+  };
+  modelName: string;
+  fields: ModelField[];
+  data: UserDetailItem[];
+}
+
+export interface UserDetailItem {
+  id: number;
+  title: string;
+  state: string;
+  created_at: string;
+  updated_at: string;
+  summary: string;
+  description: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -110,5 +137,16 @@ export class GithubService {
   
   syncUser(userId: string): Observable<any> {
     return this.httpService.post(`/auth/github/sync/${userId}`, {});
+  }
+
+  getUserDetails(assigneeId: string, modelName: string, params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    sort?: string;
+    sortOrder?: 'asc' | 'desc';
+    [key: string]: any;
+  } = {}) {
+    return this.httpService.get<UserDetails>(`/datagrid/user-details/${assigneeId}/${modelName}`, params);
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { AgGridModule } from 'ag-grid-angular';
@@ -14,7 +14,7 @@ import {
   DateFilterModel,
   ValueFormatterParams
 } from 'ag-grid-community';
-import { GithubService, GithubUser, ModelInfo } from '../../service/github.service';
+import { GithubService, GithubUser, ModelInfo, UserDetails, UserDetailItem } from '../../service/github.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
@@ -25,6 +25,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { Subject, debounceTime } from 'rxjs';
 import { AvatarCellComponent } from '../avatar-cell/avatar-cell.component';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-github-data',
@@ -46,8 +47,10 @@ import { AvatarCellComponent } from '../avatar-cell/avatar-cell.component';
   templateUrl: './github-data.component.html',
   styleUrl: './github-data.component.scss'
 })
-export class GithubDataComponent implements OnInit {
+export class GithubDataComponent implements OnInit, OnDestroy {
   @ViewChild(AgGridAngular) agGrid!: AgGridAngular;
+  
+  private findUserHandler: EventListener;
   
   autoSizeStrategy: any = {
     type: 'fitCellContents',
@@ -57,7 +60,9 @@ export class GithubDataComponent implements OnInit {
   models: ModelInfo[] = [];
   selectedUser: GithubUser | null = null;
   selectedModel: string | null = null;
-  
+  selectedUserDetailId: string | null = null;
+  selectedUserDetailModel: string | null = null;
+  isUserDetailMode : boolean = false;
   columnDefs: ColDef[] = [];
   rowData: any[] = [];
   defaultColDef: ColDef = {
@@ -95,17 +100,43 @@ export class GithubDataComponent implements OnInit {
   filterModel: any = {};
   sortModel: any = { field: 'createdAt', sort: 'desc' };
   
-  constructor(private githubService: GithubService) {
+  userDetails: UserDetails | null = null;
+  userDetailItems: UserDetailItem[] = [];
+  filteredUserDetailItems: UserDetailItem[] = [];
+  
+  constructor(private githubService: GithubService, private route: ActivatedRoute) {
+    this.route.queryParams.subscribe(params => {
+      if (params['assigneeId'] && params['model']) {
+        this.selectedUserDetailId = params['assigneeId'];
+        this.selectedUserDetailModel  = params['model'];
+        this.isUserDetailMode = true;
+      }
+    });
     this.searchDebounce
       .pipe(debounceTime(300))
       .subscribe(() => {
         this.performSearch();
       });
+      
+    // Create the event handler
+    this.findUserHandler = ((event: CustomEvent) => {
+      this.findUser(event.detail);
+    }) as EventListener;
   }
   
   ngOnInit(): void {
-    this.loadUsers();
+    if (this.isUserDetailMode) {
+      this.loadUserDetail();
+    } else {
+      this.loadUsers();
+    }
     this.updateGridHeight();
+    
+    document.addEventListener('findUser', this.findUserHandler);
+  }
+  
+  ngOnDestroy(): void {
+    document.removeEventListener('findUser', this.findUserHandler);
   }
   
   @HostListener('window:resize')
@@ -160,6 +191,266 @@ export class GithubDataComponent implements OnInit {
   
   onModelChange(): void {
     this.resetGrid();
+  }
+
+  loadUserDetail(): void {
+    if (!this.selectedUserDetailId || !this.selectedUserDetailModel) {
+      return;
+    }
+    
+    this.loading = true;
+    
+    const filterParams: any = {};
+    if (this.filterModel) {
+      Object.keys(this.filterModel).forEach(key => {
+        const filter = this.filterModel[key];
+        
+        if (filter.filterType === 'text') {
+          const textFilter = filter as TextFilterModel;
+          
+          if (textFilter.type) {
+            switch (textFilter.type) {
+              case 'contains':
+                filterParams[`${key}_contains`] = textFilter.filter;
+                break;
+              case 'notContains':
+                filterParams[`${key}_notContains`] = textFilter.filter;
+                break;
+              case 'equals':
+                filterParams[key] = textFilter.filter;
+                break;
+              case 'notEqual':
+                filterParams[`${key}_ne`] = textFilter.filter;
+                break;
+              case 'startsWith':
+                filterParams[`${key}_startsWith`] = textFilter.filter;
+                break;
+              case 'endsWith':
+                filterParams[`${key}_endsWith`] = textFilter.filter;
+                break;
+              case 'empty':
+                filterParams[`${key}_empty`] = true;
+                break;
+            }
+          } else if (textFilter.filter) {
+            filterParams[`${key}_contains`] = textFilter.filter;
+          }
+        } else if (filter.filterType === 'date') {
+          const dateFilter = filter as DateFilterModel;
+          
+          if (dateFilter.dateFrom) {
+            const date = new Date(dateFilter.dateFrom);
+            filterParams[`${key}`] = date.toISOString().split('T')[0];
+          }
+          
+          if (dateFilter.type) {
+            switch (dateFilter.type) {
+              case 'equals':
+                break;
+              case 'notEqual':
+                filterParams[`${key}_ne`] = filterParams[key];
+                delete filterParams[key];
+                break;
+              case 'greaterThan':
+                filterParams[`${key}_gt`] = filterParams[key];
+                delete filterParams[key];
+                break;
+              case 'lessThan':
+                filterParams[`${key}_lt`] = filterParams[key];
+                delete filterParams[key];
+                break;
+              case 'greaterThanOrEqual':
+                filterParams[`${key}_gte`] = filterParams[key];
+                delete filterParams[key];
+                break;
+              case 'lessThanOrEqual':
+                filterParams[`${key}_lte`] = filterParams[key];
+                delete filterParams[key];
+                break;
+            }
+          }
+        } else {
+          if (filter.filter) {
+            filterParams[key] = filter.filter;
+          }
+        }
+      });
+    }
+    
+    const params = {
+      page: this.pageIndex + 1,
+      limit: this.pageSize,
+      search: this.searchText || undefined,
+      sort: this.sortModel.field || 'created_at',
+      sortOrder: this.sortModel.sort || 'desc',
+      ...filterParams
+    };
+    
+    this.githubService.getUserDetails(this.selectedUserDetailId, this.selectedUserDetailModel, params)
+      .subscribe({
+        next: (response) => {
+          console.log('User details response:', response);
+          this.userDetails = response;
+          this.userDetailItems = response.data;
+          this.totalRows = response.totalRecords;
+          this.pageIndex = response.currentPage - 1;
+          
+          this.setupUserDetailGrid(response.fields);
+          this.rowData = this.userDetailItems;
+          this.loading = false;
+        },
+        error: (error) => {
+          console.error('Error loading user details:', error);
+          this.loading = false;
+        }
+      });
+  }
+  
+  setupUserDetailGrid(fields: any[]): void {
+    if (!this.userDetails || !this.userDetailItems.length) {
+      return;
+    }
+    
+    this.columnDefs = [
+      {
+        headerName: 'Ticket ID',
+        field: 'id',
+        sortable: true,
+        filter: 'agNumberColumnFilter',
+        floatingFilter: true,
+        width: 120,
+        flex: 0,
+        filterParams: {
+          buttons: ['apply', 'reset'],
+          closeOnApply: true
+        }
+      },
+      {
+        headerName: 'Summary',
+        field: 'summary',
+        sortable: true,
+        filter: 'agTextColumnFilter',
+        floatingFilter: true,
+        flex: 2,
+        filterParams: {
+          filterOptions: [
+            'contains',
+            'notContains',
+            'equals',
+            'notEqual',
+            'startsWith', 
+            'endsWith',
+            'empty'
+          ],
+          buttons: ['apply', 'reset'],
+          closeOnApply: true,
+          debounceMs: 200
+        }
+      },
+      {
+        headerName: 'Description',
+        field: 'description',
+        sortable: true,
+        filter: 'agTextColumnFilter',
+        floatingFilter: true,
+        flex: 3,
+        cellRenderer: (params: any) => {
+          const value = params.value || '';
+          return value.length > 100 ? value.substring(0, 100) + '...' : value;
+        },
+        filterParams: {
+          filterOptions: [
+            'contains',
+            'notContains',
+            'equals',
+            'notEqual',
+            'startsWith', 
+            'endsWith',
+            'empty'
+          ],
+          buttons: ['apply', 'reset'],
+          closeOnApply: true,
+          debounceMs: 200
+        }
+      },
+      {
+        headerName: 'State',
+        field: 'state',
+        sortable: true,
+        filter: 'agTextColumnFilter',
+        floatingFilter: true,
+        width: 120,
+        flex: 0,
+        filterParams: {
+          filterOptions: [
+            'contains',
+            'notContains',
+            'equals',
+            'notEqual',
+            'startsWith', 
+            'endsWith',
+            'empty'
+          ],
+          buttons: ['apply', 'reset'],
+          closeOnApply: true,
+          debounceMs: 200
+        }
+      },
+      {
+        headerName: 'Date',
+        field: 'created_at',
+        sortable: true,
+        filter: 'agDateColumnFilter',
+        floatingFilter: true,
+        flex: 1,
+        valueFormatter: (params: ValueFormatterParams) => {
+          if (params.value) {
+            const date = new Date(params.value);
+            if (!isNaN(date.getTime())) {
+              return date.toLocaleDateString('en-US', {
+                month: '2-digit',
+                day: '2-digit',
+                year: 'numeric'
+              });
+            }
+          }
+          return params.value;
+        },
+        filterParams: {
+          buttons: ['apply', 'reset'],
+          closeOnApply: true,
+          filterOptions: [
+            'equals',
+            'notEqual',
+            'greaterThan',
+            'lessThan',
+            'greaterThanOrEqual',
+            'lessThanOrEqual'
+          ],
+          comparator: (filterLocalDateAtMidnight: Date, cellValue: string) => {
+            if (!cellValue) return -1;
+            const cellDate = new Date(cellValue);
+            
+            // Compare dates without time component for exact date matching
+            const filterDate = new Date(filterLocalDateAtMidnight);
+            const cellDateOnly = new Date(cellDate.getFullYear(), cellDate.getMonth(), cellDate.getDate());
+            const filterDateOnly = new Date(filterDate.getFullYear(), filterDate.getMonth(), filterDate.getDate());
+            
+            if (filterDateOnly.getTime() === cellDateOnly.getTime()) {
+              return 0;
+            }
+            if (cellDateOnly < filterDateOnly) {
+              return -1;
+            }
+            if (cellDateOnly > filterDateOnly) {
+              return 1;
+            }
+            return 0;
+          },
+          debounceMs: 200
+        }
+      }
+    ];
   }
   
   loadData(): void {
@@ -378,6 +669,51 @@ export class GithubDataComponent implements OnInit {
           
           return colDef;
         });
+
+        if (this.selectedModel === 'PullRequest') {
+          this.columnDefs.unshift({
+            headerName: '',
+            field: 'findUser',
+            width: 100,
+            flex: 0,
+            sortable: false,
+            filter: false,
+            floatingFilter: false,
+            cellRenderer: (params: any) => {
+              // Check if the row data has assignee with an id
+              if (params.data && params.data.assignee && params.data.assignee.id) {
+                const assigneeId = params.data.assignee.id;
+                return `<a href="javascript:void(0)" 
+                         onclick="document.dispatchEvent(new CustomEvent('findUser', 
+                         { detail: {'assigneeId': '${assigneeId}', 'ModelName': 'PullRequest' } }))">Find User</a>`;
+              }
+              return '';
+            }
+          });
+        }
+        
+
+        if (this.selectedModel === 'Issue') {
+          this.columnDefs.unshift({
+            headerName: '',
+            field: 'findUser',
+            width: 100,
+            flex: 0,
+            sortable: false,
+            filter: false,
+            floatingFilter: false,
+            cellRenderer: (params: any) => {
+              // Check if the row data has closed_by with an id
+              if (params.data && params.data.closed_by && params.data.closed_by.id) {
+                const closedById = params.data.closed_by.id;
+                return `<a href="javascript:void(0)" 
+                         onclick="document.dispatchEvent(new CustomEvent('findUser', 
+                         { detail: {'assigneeId': '${closedById}', 'ModelName': 'Issue' } }))">Find User</a>`;
+              }
+              return '';
+            }
+          });
+        }
         
         this.loading = false;
         
@@ -403,12 +739,33 @@ export class GithubDataComponent implements OnInit {
     this.filterModel = this.gridApi.getFilterModel();
     console.log('Filter model updated:', this.filterModel);
     this.pageIndex = 0;
-    this.loadData();
+    
+    if (this.isUserDetailMode) {
+      this.loadUserDetail();
+    } else {
+      this.loadData();
+    }
   }
   
   onSortChanged(event: SortChangedEvent): void {
+    const columnState = this.gridApi.getColumnState();
+    const sortedColumn = columnState.find(col => col.sort !== null && col.sort !== undefined);
+    
+    if (sortedColumn) {
+      this.sortModel = {
+        field: sortedColumn.colId,
+        sort: sortedColumn.sort
+      };
+    } else {
+      this.sortModel = { field: 'created_at', sort: 'desc' };
+    }
+    
     this.pageIndex = 0;
-    this.loadData();
+    if (this.isUserDetailMode) {
+      this.loadUserDetail();
+    } else {
+      this.loadData();
+    }
   }
   
   onSearchInput(): void {
@@ -417,7 +774,11 @@ export class GithubDataComponent implements OnInit {
   
   performSearch(): void {
     this.pageIndex = 0;
-    this.loadData();
+    if (this.isUserDetailMode) {
+      this.loadUserDetail();
+    } else {
+      this.loadData();
+    }
   }
   
   onSearch(): void {
@@ -426,7 +787,11 @@ export class GithubDataComponent implements OnInit {
   
   clearSearch(): void {
     this.searchText = '';
-    this.loadData();
+    if (this.isUserDetailMode) {
+      this.loadUserDetail();
+    } else {
+      this.loadData();
+    }
   }
   
   clearGrid(): void {
@@ -442,18 +807,28 @@ export class GithubDataComponent implements OnInit {
     this.searchText = '';
     this.pageIndex = 0;
     this.filterModel = {};
-    this.sortModel = { field: 'createdAt', sort: 'desc' };
+    this.sortModel = { field: 'created_at', sort: 'desc' };
     if (this.gridApi) {
       this.gridApi.setFilterModel(null);
       this.gridApi.refreshHeader();
     }
-    this.loadData();
+    
+    if (this.isUserDetailMode) {
+      this.loadUserDetail();
+    } else {
+      this.loadData();
+    }
   }
   
   onPageChange(event: PageEvent): void {
     this.pageSize = event.pageSize;
     this.pageIndex = event.pageIndex;
-    this.loadData();
+    
+    if (this.isUserDetailMode) {
+      this.loadUserDetail();
+    } else {
+      this.loadData();
+    }
   }
   
   formatHeaderName(field: string): string {
@@ -461,5 +836,20 @@ export class GithubDataComponent implements OnInit {
       .replace(/([A-Z])/g, ' $1')
       .replace(/^./, str => str.toUpperCase())
       .trim();
+  }
+
+  findUser(detail: any): void {
+    const assigneeId = detail.assigneeId;
+    const ModelName = detail.ModelName;
+    if (assigneeId) {
+      console.log('Finding user with assignee ID:', assigneeId);
+
+      const baseUrl = window.location.origin;
+      if (ModelName === 'PullRequest') {
+        window.open(`${baseUrl}/github/data?assigneeId=${assigneeId}&model=PullRequest`, '_blank');
+      } else if (ModelName === 'Issue') {
+        window.open(`${baseUrl}/github/data?assigneeId=${assigneeId}&model=Issue`, '_blank');
+      }
+    }
   }
 }
