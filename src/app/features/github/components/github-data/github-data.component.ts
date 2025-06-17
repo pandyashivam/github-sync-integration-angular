@@ -23,6 +23,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { Subject, debounceTime } from 'rxjs';
 import { AvatarCellComponent } from '../avatar-cell/avatar-cell.component';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -43,6 +45,9 @@ import { ActivatedRoute, Router } from '@angular/router';
     MatCardModule,
     MatProgressSpinnerModule,
     MatPaginatorModule,
+    MatCheckboxModule,
+    MatExpansionModule,
+    AvatarCellComponent,
   ],
   templateUrl: './github-data.component.html',
   styleUrl: './github-data.component.scss'
@@ -89,6 +94,9 @@ export class GithubDataComponent implements OnInit, OnDestroy {
   gridApi!: GridApi;
   gridHeight: string = 'calc(100vh - 150px)';
   
+  // Store grid APIs for collection grids
+  collectionGridApis: GridApi[] = [];
+  
   searchText: string = '';
   searchDebounce: Subject<string> = new Subject<string>();
   loading: boolean = false;
@@ -96,6 +104,7 @@ export class GithubDataComponent implements OnInit, OnDestroy {
   pageSize: number = 25;
   pageIndex: number = 0;
   pageSizeOptions: number[] = [10, 25, 50, 100];
+  searchAcrossAllCollections: boolean = false;
   
   filterModel: any = {};
   sortModel: any = { field: 'createdAt', sort: 'desc' };
@@ -103,6 +112,14 @@ export class GithubDataComponent implements OnInit, OnDestroy {
   userDetails: UserDetails | null = null;
   userDetailItems: UserDetailItem[] = [];
   filteredUserDetailItems: UserDetailItem[] = [];
+  
+  searchResults: any[] = [];
+  
+  // Add collection-specific pagination tracking
+  collectionPagination: { [key: number]: { pageIndex: number, pageSize: number } } = {};
+  
+  // Add collection-specific loading indicators
+  collectionLoading: { [key: number]: boolean } = {};
   
   constructor(private githubService: GithubService, private route: ActivatedRoute) {
     this.route.queryParams.subscribe(params => {
@@ -185,11 +202,13 @@ export class GithubDataComponent implements OnInit, OnDestroy {
   
   onUserChange(): void {
     this.selectedModel = null;
+    this.searchAcrossAllCollections = false;
     this.clearGrid();
     this.loadModels();
   }
   
   onModelChange(): void {
+    this.searchAcrossAllCollections = false;
     this.resetGrid();
   }
 
@@ -323,6 +342,18 @@ export class GithubDataComponent implements OnInit, OnDestroy {
         filterParams: {
           buttons: ['apply', 'reset'],
           closeOnApply: true
+        },
+        // Add cell style function to highlight cells containing search text
+        cellStyle: (params: any) => {
+          if (this.searchText && params.value) {
+            const searchLower = this.searchText.toLowerCase();
+            const valueLower = params.value.toString().toLowerCase();
+            
+            if (valueLower.includes(searchLower)) {
+              return { backgroundColor: '#FFFFCC' }; // Light yellow highlight
+            }
+          }
+          return null;
         }
       },
       {
@@ -345,6 +376,18 @@ export class GithubDataComponent implements OnInit, OnDestroy {
           buttons: ['apply', 'reset'],
           closeOnApply: true,
           debounceMs: 200
+        },
+        // Add cell style function to highlight cells containing search text
+        cellStyle: (params: any) => {
+          if (this.searchText && params.value && typeof params.value === 'string') {
+            const searchLower = this.searchText.toLowerCase();
+            const valueLower = params.value.toString().toLowerCase();
+            
+            if (valueLower.includes(searchLower)) {
+              return { backgroundColor: '#FFFFCC' }; // Light yellow highlight
+            }
+          }
+          return null;
         }
       },
       {
@@ -356,7 +399,19 @@ export class GithubDataComponent implements OnInit, OnDestroy {
         flex: 3,
         cellRenderer: (params: any) => {
           const value = params.value || '';
-          return value.length > 100 ? value.substring(0, 100) + '...' : value;
+          const displayValue = value.length > 100 ? value.substring(0, 100) + '...' : value;
+          
+          // Add highlighting for search text
+          if (this.searchText && typeof value === 'string') {
+            const searchLower = this.searchText.toLowerCase();
+            const valueLower = value.toLowerCase();
+            
+            if (valueLower.includes(searchLower)) {
+              return `<div style="background-color: #FFFFCC;">${displayValue}</div>`;
+            }
+          }
+          
+          return displayValue;
         },
         filterParams: {
           filterOptions: [
@@ -394,6 +449,18 @@ export class GithubDataComponent implements OnInit, OnDestroy {
           buttons: ['apply', 'reset'],
           closeOnApply: true,
           debounceMs: 200
+        },
+        // Add cell style function to highlight cells containing search text
+        cellStyle: (params: any) => {
+          if (this.searchText && params.value && typeof params.value === 'string') {
+            const searchLower = this.searchText.toLowerCase();
+            const valueLower = params.value.toString().toLowerCase();
+            
+            if (valueLower.includes(searchLower)) {
+              return { backgroundColor: '#FFFFCC' }; // Light yellow highlight
+            }
+          }
+          return null;
         }
       },
       {
@@ -415,6 +482,22 @@ export class GithubDataComponent implements OnInit, OnDestroy {
             }
           }
           return params.value;
+        },
+        // Add cell style function to highlight cells containing search text
+        cellStyle: (params: any) => {
+          if (this.searchText && params.value) {
+            const searchLower = this.searchText.toLowerCase();
+            const formattedDate = new Date(params.value).toLocaleDateString('en-US', {
+              month: '2-digit',
+              day: '2-digit',
+              year: 'numeric'
+            }).toLowerCase();
+            
+            if (formattedDate.includes(searchLower)) {
+              return { backgroundColor: '#FFFFCC' }; // Light yellow highlight
+            }
+          }
+          return null;
         },
         filterParams: {
           buttons: ['apply', 'reset'],
@@ -566,7 +649,19 @@ export class GithubDataComponent implements OnInit, OnDestroy {
             field: field.field,
             headerName: this.formatHeaderName(field.field),
             sortable: true,
-            floatingFilter: true
+            floatingFilter: true,
+            // Add cell style function to highlight cells containing search text
+            cellStyle: (params: any) => {
+              if (this.searchText && params.value && typeof params.value === 'string') {
+                const searchLower = this.searchText.toLowerCase();
+                const valueLower = params.value.toString().toLowerCase();
+                
+                if (valueLower.includes(searchLower)) {
+                  return { backgroundColor: '#FFFFCC' }; // Light yellow highlight
+                }
+              }
+              return null;
+            }
           };
           
           // Check if field is an avatar URL field
@@ -720,6 +815,7 @@ export class GithubDataComponent implements OnInit, OnDestroy {
         setTimeout(() => {
           if (this.gridApi) {
             this.gridApi.sizeColumnsToFit();
+
           }
         }, 100);
       },
@@ -732,7 +828,30 @@ export class GithubDataComponent implements OnInit, OnDestroy {
   
   onGridReady(params: GridReadyEvent): void {
     this.gridApi = params.api;
+    
     this.gridApi.sizeColumnsToFit();
+  }
+  
+  onCollectionGridReady(params: GridReadyEvent, index: number): void {
+    // Store the grid API for this collection
+    this.collectionGridApis[index] = params.api;
+    
+    // Size columns to fit
+    params.api.sizeColumnsToFit();
+    
+    // Auto-size all columns for better visibility
+    setTimeout(() => {
+      // Get all column IDs
+      const allColumnIds: string[] = [];
+      params.api.getColumnDefs()?.forEach((colDef: any) => {
+        if (colDef.field) {
+          allColumnIds.push(colDef.field);
+        }
+      });
+      
+      // Auto-size columns
+      params.api.autoSizeColumns(allColumnIds);
+    }, 100);
   }
   
   onFilterChanged(event: FilterChangedEvent): void {
@@ -770,15 +889,69 @@ export class GithubDataComponent implements OnInit, OnDestroy {
   
   onSearchInput(): void {
     this.searchDebounce.next(this.searchText);
+    
+    // Refresh the grid to apply highlighting without reloading data
+    if (this.gridApi && !this.searchAcrossAllCollections) {
+      this.gridApi.refreshCells({ force: true });
+    }
+    
+    // Refresh collection grids if they exist
+    if (this.collectionGridApis.length > 0) {
+      this.collectionGridApis.forEach(api => {
+        if (api) {
+          api.refreshCells({ force: true });
+        }
+      });
+    }
   }
   
   performSearch(): void {
     this.pageIndex = 0;
-    if (this.isUserDetailMode) {
+    if (this.searchAcrossAllCollections && this.searchText) {
+      this.loadGlobalSearchResults();
+    } else if (this.isUserDetailMode) {
       this.loadUserDetail();
     } else {
       this.loadData();
     }
+  }
+  
+  loadGlobalSearchResults(): void {
+    if (!this.searchText || !this.selectedUser || !this.selectedUser._id) return;
+    
+    this.loading = true;
+    
+    this.githubService.searchAcrossAllCollections(this.selectedUser._id, this.searchText, {
+      page: this.pageIndex + 1,
+      limit: this.pageSize
+    }).subscribe({
+      next: (response: any) => {
+        this.totalRows = response.totalRecords || 0;
+        
+        // Clear existing row data and column definitions
+        this.rowData = [];
+        this.columnDefs = [];
+        
+        // Set the response data directly - this will be used for rendering multiple grids
+        // in the template
+        this.searchResults = response.data || [];
+        
+        // Initialize collection pagination tracking and loading indicators
+        this.searchResults.forEach((collection, index) => {
+          this.collectionPagination[index] = {
+            pageIndex: 0,
+            pageSize: 10
+          };
+          this.collectionLoading[index] = false;
+        });
+        
+        this.loading = false;
+      },
+      error: (error: any) => {
+        console.error('Error performing global search:', error);
+        this.loading = false;
+      }
+    });
   }
   
   onSearch(): void {
@@ -787,6 +960,14 @@ export class GithubDataComponent implements OnInit, OnDestroy {
   
   clearSearch(): void {
     this.searchText = '';
+    this.searchResults = [];
+    
+    // If we were in global search mode, reset the grid completely
+    if (this.searchAcrossAllCollections) {
+      this.resetGrid();
+      return;
+    }
+    
     if (this.isUserDetailMode) {
       this.loadUserDetail();
     } else {
@@ -797,6 +978,7 @@ export class GithubDataComponent implements OnInit, OnDestroy {
   clearGrid(): void {
     this.rowData = [];
     this.columnDefs = [];
+    this.searchResults = [];
     this.totalRows = 0;
     this.pageIndex = 0;
     this.filterModel = {};
@@ -808,6 +990,9 @@ export class GithubDataComponent implements OnInit, OnDestroy {
     this.pageIndex = 0;
     this.filterModel = {};
     this.sortModel = { field: 'created_at', sort: 'desc' };
+    this.searchAcrossAllCollections = false;
+    this.searchResults = [];
+    
     if (this.gridApi) {
       this.gridApi.setFilterModel(null);
       this.gridApi.refreshHeader();
@@ -838,6 +1023,173 @@ export class GithubDataComponent implements OnInit, OnDestroy {
       .trim();
   }
 
+  getCollectionColumnDefs(collection: any): ColDef[] {
+    if (!collection || !collection.data || collection.data.length === 0) {
+      return [];
+    }
+    
+    // Get the first item to determine fields
+    const firstItem = collection.data[0];
+    
+    // Add avatar column if there are users with avatars in the data
+    const columnDefs: ColDef[] = [];
+    
+    // Check for user objects with avatar URLs
+    if (firstItem.user?.avatar_url || 
+        firstItem.assignee?.avatar_url || 
+        firstItem.closed_by?.avatar_url ||
+        firstItem.author?.avatar_url) {
+      
+      // Add avatar column at the beginning
+      columnDefs.push({
+        headerName: '',
+        field: 'avatar',
+        width: 60,
+        flex: 0,
+        sortable: false,
+        filter: false,
+        floatingFilter: false,
+        cellRenderer: (params: any) => {
+          // Find avatar URL in various possible locations
+          const avatarUrl = 
+            params.data.user?.avatar_url || 
+            params.data.assignee?.avatar_url || 
+            params.data.closed_by?.avatar_url ||
+            params.data.author?.avatar_url;
+            
+          if (avatarUrl) {
+            return `<img src="${avatarUrl}" alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%;" />`;
+          }
+          return '';
+        }
+      });
+    }
+    
+    // Use the pre-extracted fields from collection.fields
+    // Filter out object type fields
+    const regularColumns = (collection.fields || [])
+      .filter((field: { field: string, type: string }) => 
+        // Skip object type fields
+        field.type !== 'object' && 
+        // Skip array type fields
+        field.type !== 'array'
+      )
+      .map((field: { field: string, type: string }) => {
+        const colDef: ColDef = {
+          field: field.field,
+          headerName: this.formatHeaderName(field.field),
+          sortable: true,
+          filter: false, // Disable filtering
+          floatingFilter: false, // Disable floating filter
+          // Add cell style function to highlight cells containing search text
+          cellStyle: (params: any) => {
+            if (this.searchText && params.value && typeof params.value === 'string') {
+              const searchLower = this.searchText.toLowerCase();
+              const valueLower = params.value.toString().toLowerCase();
+              
+              if (valueLower.includes(searchLower)) {
+                return { backgroundColor: '#FFFFCC' }; // Light yellow highlight
+              }
+            }
+            return null;
+          }
+        };
+        
+        // Check if field is an avatar URL field
+        const fieldName = field.field.toLowerCase();
+        if (fieldName === 'avatar_url' || 
+            fieldName === 'avatarurl' || 
+            fieldName === 'avatar' || 
+            fieldName.includes('avatar_url') || 
+            fieldName.includes('avatarurl')) {
+          colDef.cellRenderer = AvatarCellComponent;
+          colDef.width = 80;
+          colDef.flex = 0;
+        } else if (field.type === 'date' || 
+                  fieldName.includes('date') || 
+                  fieldName.includes('created') || 
+                  fieldName.includes('updated')) {
+          colDef.valueFormatter = (params) => {
+            if (params.value) {
+              const date = new Date(params.value);
+              if (!isNaN(date.getTime())) {
+                  return date.toLocaleDateString('en-US', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    year: 'numeric'
+                  });
+              }
+            }
+            return params.value;
+          };
+        }
+        
+        return colDef;
+      });
+    
+    // Filter out duplicate columns and system fields
+    const filteredColumns = regularColumns.filter((col: ColDef, index: number, self: ColDef[]) => {
+      // Skip columns with undefined fields
+      if (!col.field) return false;
+      
+      return (
+        // Filter out duplicates based on field name
+        index === self.findIndex((c: ColDef) => c.field === col.field) &&
+        // Filter out system fields
+        !col.field.startsWith('_') &&
+        // Filter out some common fields we don't want to display
+        !['__v', '__proto__', 'constructor'].includes(col.field)
+      );
+    });
+    
+    columnDefs.push(...filteredColumns);
+    
+    // Add "Find User" column for PullRequest and Issue collections
+    if (collection.collectionName === 'PullRequest') {
+      columnDefs.unshift({
+        headerName: '',
+        field: 'findUser',
+        width: 100,
+        flex: 0,
+        sortable: false,
+        filter: false,
+        floatingFilter: false,
+        cellRenderer: (params: any) => {
+          // Check if the row data has assignee with an id
+          if (params.data && params.data.assignee && params.data.assignee.id) {
+            const assigneeId = params.data.assignee.id;
+            return `<a href="javascript:void(0)" 
+                     onclick="document.dispatchEvent(new CustomEvent('findUser', 
+                     { detail: {'assigneeId': '${assigneeId}', 'ModelName': 'PullRequest' } }))">Find User</a>`;
+          }
+          return '';
+        }
+      });
+    } else if (collection.collectionName === 'Issue') {
+      columnDefs.unshift({
+        headerName: '',
+        field: 'findUser',
+        width: 100,
+        flex: 0,
+        sortable: false,
+        filter: false,
+        floatingFilter: false,
+        cellRenderer: (params: any) => {
+          // Check if the row data has closed_by with an id
+          if (params.data && params.data.closed_by && params.data.closed_by.id) {
+            const closedById = params.data.closed_by.id;
+            return `<a href="javascript:void(0)" 
+                     onclick="document.dispatchEvent(new CustomEvent('findUser', 
+                     { detail: {'assigneeId': '${closedById}', 'ModelName': 'Issue' } }))">Find User</a>`;
+          }
+          return '';
+        }
+      });
+    }
+    
+    return columnDefs;
+  }
+  
   findUser(detail: any): void {
     const assigneeId = detail.assigneeId;
     const ModelName = detail.ModelName;
@@ -851,5 +1203,54 @@ export class GithubDataComponent implements OnInit, OnDestroy {
         window.open(`${baseUrl}/github/data?assigneeId=${assigneeId}&model=Issue`, '_blank');
       }
     }
+  }
+
+  onCollectionPageChange(event: PageEvent, index: number, collection: any): void {
+    // Store pagination state for this collection
+    this.collectionPagination[index] = {
+      pageIndex: event.pageIndex,
+      pageSize: event.pageSize
+    };
+    
+    // Load the paginated data for this specific collection
+    this.loadCollectionData(collection.collectionName, index, event.pageIndex + 1, event.pageSize);
+  }
+  
+  loadCollectionData(collectionName: string, index: number, page: number, limit: number): void {
+    if (!this.selectedUser || !this.selectedUser._id) return;
+    
+    // Show loading indicator for this collection
+    this.collectionLoading[index] = true;
+    
+    this.githubService.searchAcrossAllCollections(this.selectedUser._id, this.searchText, {
+      page: page,
+      limit: limit,
+      collectionName: collectionName // Add this parameter to filter by collection name
+    }).subscribe({
+      next: (response: any) => {
+        // Find and update the specific collection in searchResults
+        if (response.data && response.data.length > 0) {
+          const collectionData = response.data.find((c: any) => c.collectionName === collectionName);
+          if (collectionData) {
+            // Update just this collection's data
+            this.searchResults[index] = collectionData;
+            
+            // Refresh the grid
+            if (this.collectionGridApis[index]) {
+              // Use the correct method to update row data
+              this.collectionGridApis[index].setGridOption('rowData', collectionData.data);
+            }
+          }
+        }
+        
+        // Hide loading indicator
+        this.collectionLoading[index] = false;
+      },
+      error: (error: any) => {
+        console.error(`Error loading paginated data for collection ${collectionName}:`, error);
+        // Hide loading indicator on error
+        this.collectionLoading[index] = false;
+      }
+    });
   }
 }

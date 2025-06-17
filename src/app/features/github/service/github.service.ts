@@ -68,25 +68,42 @@ export interface UserDetails {
   totalPages: number;
   currentPage: number;
   totalRecords: number;
-  userDetails: {
-    login: string;
-    id: number;
-    avatar_url: string;
-    [key: string]: any;
-  };
+  userDetails: any;
   modelName: string;
-  fields: ModelField[];
+  fields: any[];
   data: UserDetailItem[];
 }
 
 export interface UserDetailItem {
   id: number;
-  title: string;
+  summary: string;
+  description: string;
   state: string;
   created_at: string;
   updated_at: string;
-  summary: string;
-  description: string;
+}
+
+export interface GlobalSearchResult {
+  success: boolean;
+  count: number;
+  totalPages: number;
+  currentPage: number;
+  totalRecords: number;
+  totalMatches: number;
+  data: CollectionSearchResult[];
+}
+
+export interface CollectionSearchResult {
+  collectionName: string;
+  matchCount: number;
+  matches: GlobalSearchItem[];
+}
+
+export interface GlobalSearchItem {
+  fieldName: string;
+  value: string;
+  recordId: string | number;
+  recordData: any;
 }
 
 @Injectable({
@@ -148,5 +165,16 @@ export class GithubService {
     [key: string]: any;
   } = {}) {
     return this.httpService.get<UserDetails>(`/datagrid/user-details/${assigneeId}/${modelName}`, params);
+  }
+
+  searchAcrossAllCollections(userId: string, searchText: string, params: {
+    page?: number;
+    limit?: number;
+    [key: string]: any;
+  } = {}) {
+    return this.httpService.get<GlobalSearchResult>(`/datagrid/global-search/${userId}`, {
+      search: searchText,
+      ...params
+    });
   }
 }

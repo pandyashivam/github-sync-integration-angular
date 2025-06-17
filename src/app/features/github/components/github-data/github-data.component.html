@@ -24,6 +24,9 @@
         </button>
         <mat-hint>Searches in all columns</mat-hint>
       </mat-form-field>
+      <mat-checkbox class="search-all-checkbox" [(ngModel)]="searchAcrossAllCollections" color="primary">
+        Search Across All Collections
+      </mat-checkbox>
       <button mat-raised-button color="primary" (click)="onSearch()">
         <mat-icon>search</mat-icon> Search
       </button>
@@ -64,6 +67,9 @@
         </button>
         <mat-hint>Searches in all columns of all data types</mat-hint>
       </mat-form-field>
+      <mat-checkbox class="search-all-checkbox" [(ngModel)]="searchAcrossAllCollections" color="primary">
+        Search Across All Collections
+      </mat-checkbox>
       <button mat-raised-button color="primary" (click)="onSearch()">
         <mat-icon>search</mat-icon> Search
       </button>
@@ -77,7 +83,7 @@
     <mat-spinner diameter="40"></mat-spinner>
   </div>
 
-  <div class="grid-container" [hidden]="loading" [style]="{'height': gridHeight}">
+  <div class="grid-container" [style]="{'height': gridHeight}" [hidden]="loading">
     <ag-grid-angular
       class="ag-theme-alpine"
       [rowData]="rowData"
@@ -91,7 +97,9 @@
       [domLayout]="'normal'"
       [animateRows]="true"
       [rowHeight]="35"
-      [autoSizeStrategy]="autoSizeStrategy"
+      [autoSizeStrategy]="{
+        type: 'fitCellContents'
+      }"
       (gridReady)="onGridReady($event)"
       (filterChanged)="onFilterChanged($event)"
       (sortChanged)="onSortChanged($event)">
@@ -107,7 +115,7 @@
     </mat-paginator>
   </div>
 
-  <div *ngIf="!loading && !isUserDetailMode && (!selectedUser || !selectedModel)" class="no-data-message">
+  <div *ngIf="!loading && !isUserDetailMode && (!selectedUser || !selectedModel) && !(searchResults.length > 0)" class="no-data-message">
     <mat-card>
       <mat-card-content>
         <p>Please select a GitHub integration and an entity collection to view data.</p>
@@ -115,12 +123,75 @@
     </mat-card>
   </div>
 
-  <div *ngIf="!loading && !isUserDetailMode && selectedUser && selectedModel && rowData.length === 0" class="no-results-message">
+  <div *ngIf="!loading && !isUserDetailMode && selectedUser && selectedModel && rowData.length === 0 && !(searchResults.length > 0)" class="no-results-message">
     <mat-card>
       <mat-card-content>
         <p>No data found for the selected criteria.</p>
       </mat-card-content>
     </mat-card>
+  </div>
+  
+  <div *ngIf="!loading && searchAcrossAllCollections && searchText && rowData.length === 0 && searchResults.length === 0" class="no-results-message">
+    <mat-card>
+      <mat-card-content>
+        <p>No results found across collections for "{{searchText}}".</p>
+      </mat-card-content>
+    </mat-card>
+  </div>
+  
+  <!-- Multiple grids for global search results -->
+  <div *ngIf="!loading && searchAcrossAllCollections && searchResults.length > 0" class="multi-grid-container">
+    <div *ngFor="let collection of searchResults; let i = index">
+      <mat-expansion-panel [expanded]="i === 0">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            {{collection.collectionName}}
+            <span class="collection-count">({{collection.totalRecords}} matches)</span>
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        
+        <!-- Collection-specific loading spinner -->
+        <div *ngIf="collectionLoading[i]" class="collection-loading-spinner">
+          <mat-spinner diameter="30"></mat-spinner>
+        </div>
+        
+        <div class="grid-container" [style]="{'height': '400px'}" [hidden]="collectionLoading[i]">
+          <ag-grid-angular
+            class="ag-theme-alpine"
+            [rowData]="collection.data"
+            [columnDefs]="getCollectionColumnDefs(collection)"
+            [defaultColDef]="{
+              sortable: true,
+              filter: false,
+              resizable: true,
+              flex: 1,
+              minWidth: 100,
+            }"
+            [pagination]="false"
+            [rowSelection]="'multiple'"
+            [suppressRowClickSelection]="true"
+            [enableCellTextSelection]="true"
+            [suppressCellFocus]="true"
+            
+            [animateRows]="true"
+            [rowHeight]="35"
+            [autoSizeStrategy]="{
+              type: 'fitCellContents'
+            }"
+            (gridReady)="onCollectionGridReady($event, i)">
+          </ag-grid-angular>
+        </div>
+        
+        <!-- Individual paginator for each collection grid -->
+        <mat-paginator 
+          [length]="collection.totalRecords"
+          [pageSize]="collectionPagination[i]?.pageSize || 10"
+          [pageSizeOptions]="[5, 10, 25, 50]"
+          [pageIndex]="collectionPagination[i]?.pageIndex || 0"
+          (page)="onCollectionPageChange($event, i, collection)">
+        </mat-paginator>
+      </mat-expansion-panel>
+    </div>
   </div>
   
   <div *ngIf="!loading && isUserDetailMode && (!userDetails || userDetailItems.length === 0)" class="no-results-message">
