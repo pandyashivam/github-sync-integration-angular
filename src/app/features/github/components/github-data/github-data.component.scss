@@ -12,6 +12,7 @@
   gap: 16px;
   margin-bottom: 20px;
   align-items: flex-start;
+  position: relative;
 }
 
 .user-select,
@@ -35,6 +36,10 @@
 
 .search-all-checkbox {
   margin: 0 8px;
+}
+
+.relational-grid-btn {
+  margin-left: auto;
 }
 
 .collection-count {
@@ -144,7 +149,6 @@ mat-card {
   }
 }
 
-// Add styles for user detail view
 .user-detail-view {
   margin-bottom: 20px;
   padding: 15px;
@@ -170,8 +174,10 @@ mat-card {
 
 .user-detail-header {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .user-detail-title {
@@ -246,7 +252,6 @@ mat-card {
   margin: 10px 0;
 }
 
-/* Styles for highlighted cells */
 :host ::ng-deep .ag-cell-highlight {
   background-color: #FFFFCC !important;
   transition: background-color 0.3s;
@@ -256,7 +261,6 @@ mat-card {
   background-color: #FFFF99 !important;
 }
 
-/* Add a subtle border to highlighted cells */
 :host ::ng-deep .ag-cell[style*="background-color: rgb(255, 255, 204)"] {
   border: 1px solid #FFD700;
   box-shadow: 0 0 2px rgba(255, 215, 0, 0.5);

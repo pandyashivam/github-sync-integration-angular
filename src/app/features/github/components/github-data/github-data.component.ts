@@ -833,15 +833,11 @@ export class GithubDataComponent implements OnInit, OnDestroy {
   }
   
   onCollectionGridReady(params: GridReadyEvent, index: number): void {
-    // Store the grid API for this collection
     this.collectionGridApis[index] = params.api;
     
-    // Size columns to fit
     params.api.sizeColumnsToFit();
     
-    // Auto-size all columns for better visibility
     setTimeout(() => {
-      // Get all column IDs
       const allColumnIds: string[] = [];
       params.api.getColumnDefs()?.forEach((colDef: any) => {
         if (colDef.field) {
@@ -849,7 +845,6 @@ export class GithubDataComponent implements OnInit, OnDestroy {
         }
       });
       
-      // Auto-size columns
       params.api.autoSizeColumns(allColumnIds);
     }, 100);
   }
@@ -1028,19 +1023,14 @@ export class GithubDataComponent implements OnInit, OnDestroy {
       return [];
     }
     
-    // Get the first item to determine fields
     const firstItem = collection.data[0];
-    
-    // Add avatar column if there are users with avatars in the data
     const columnDefs: ColDef[] = [];
     
-    // Check for user objects with avatar URLs
     if (firstItem.user?.avatar_url || 
         firstItem.assignee?.avatar_url || 
         firstItem.closed_by?.avatar_url ||
         firstItem.author?.avatar_url) {
       
-      // Add avatar column at the beginning
       columnDefs.push({
         headerName: '',
         field: 'avatar',
@@ -1050,7 +1040,6 @@ export class GithubDataComponent implements OnInit, OnDestroy {
         filter: false,
         floatingFilter: false,
         cellRenderer: (params: any) => {
-          // Find avatar URL in various possible locations
           const avatarUrl = 
             params.data.user?.avatar_url || 
             params.data.assignee?.avatar_url || 
@@ -1065,13 +1054,9 @@ export class GithubDataComponent implements OnInit, OnDestroy {
       });
     }
     
-    // Use the pre-extracted fields from collection.fields
-    // Filter out object type fields
     const regularColumns = (collection.fields || [])
       .filter((field: { field: string, type: string }) => 
-        // Skip object type fields
         field.type !== 'object' && 
-        // Skip array type fields
         field.type !== 'array'
       )
       .map((field: { field: string, type: string }) => {
@@ -1079,23 +1064,21 @@ export class GithubDataComponent implements OnInit, OnDestroy {
           field: field.field,
           headerName: this.formatHeaderName(field.field),
           sortable: true,
-          filter: false, // Disable filtering
-          floatingFilter: false, // Disable floating filter
-          // Add cell style function to highlight cells containing search text
+          filter: false,
+          floatingFilter: false,
           cellStyle: (params: any) => {
             if (this.searchText && params.value && typeof params.value === 'string') {
               const searchLower = this.searchText.toLowerCase();
               const valueLower = params.value.toString().toLowerCase();
               
               if (valueLower.includes(searchLower)) {
-                return { backgroundColor: '#FFFFCC' }; // Light yellow highlight
+                return { backgroundColor: '#FFFFCC' };
               }
             }
             return null;
           }
         };
         
-        // Check if field is an avatar URL field
         const fieldName = field.field.toLowerCase();
         if (fieldName === 'avatar_url' || 
             fieldName === 'avatarurl' || 
@@ -1127,24 +1110,18 @@ export class GithubDataComponent implements OnInit, OnDestroy {
         return colDef;
       });
     
-    // Filter out duplicate columns and system fields
     const filteredColumns = regularColumns.filter((col: ColDef, index: number, self: ColDef[]) => {
-      // Skip columns with undefined fields
       if (!col.field) return false;
       
       return (
-        // Filter out duplicates based on field name
         index === self.findIndex((c: ColDef) => c.field === col.field) &&
-        // Filter out system fields
         !col.field.startsWith('_') &&
-        // Filter out some common fields we don't want to display
         !['__v', '__proto__', 'constructor'].includes(col.field)
       );
     });
     
     columnDefs.push(...filteredColumns);
     
-    // Add "Find User" column for PullRequest and Issue collections
     if (collection.collectionName === 'PullRequest') {
       columnDefs.unshift({
         headerName: '',
@@ -1155,7 +1132,6 @@ export class GithubDataComponent implements OnInit, OnDestroy {
         filter: false,
         floatingFilter: false,
         cellRenderer: (params: any) => {
-          // Check if the row data has assignee with an id
           if (params.data && params.data.assignee && params.data.assignee.id) {
             const assigneeId = params.data.assignee.id;
             return `<a href="javascript:void(0)" 
@@ -1175,7 +1151,6 @@ export class GithubDataComponent implements OnInit, OnDestroy {
         filter: false,
         floatingFilter: false,
         cellRenderer: (params: any) => {
-          // Check if the row data has closed_by with an id
           if (params.data && params.data.closed_by && params.data.closed_by.id) {
             const closedById = params.data.closed_by.id;
             return `<a href="javascript:void(0)" 
@@ -1203,6 +1178,11 @@ export class GithubDataComponent implements OnInit, OnDestroy {
         window.open(`${baseUrl}/github/data?assigneeId=${assigneeId}&model=Issue`, '_blank');
       }
     }
+  }
+  
+  openRelationalGrid(): void {
+    const baseUrl = window.location.origin;
+    window.open(`${baseUrl}/github/relational-data`, '_blank');
   }
 
   onCollectionPageChange(event: PageEvent, index: number, collection: any): void {

@@ -106,10 +106,113 @@ export interface GlobalSearchItem {
   recordData: any;
 }
 
+export interface RelationalDataResponse {
+  success: boolean;
+  count: number;
+  totalCount: number;
+  currentPage: number;
+  totalPages: number;
+  totalPRs: number;
+  totalIssues: number;
+  repositories: any[];
+  data: RepoRelationship[];
+  fields?: {
+    pullRequestFields: ModelField[];
+    issueFields: ModelField[];
+    commitFields: ModelField[];
+    historyFields: ModelField[];
+  };
+}
+
+export interface RepoRelationship {
+  repositoryId: string;
+  repositoryName: string;
+  repositoryFullName: string;
+  commits: CommitItem[];
+  pullRequests: PullRequestItem[];
+  issues: IssueItem[];
+}
+
+export interface CommitItem {
+  type: string;
+  repositoryId: string;
+  repositoryName: string;
+  repositoryFullName: string;
+  sha?: string;
+  message?: string;
+  date?: string;
+  author?: {
+    name?: string;
+    email?: string;
+    date?: string;
+  };
+  [key: string]: any;
+}
+
+export interface PullRequestItem {
+  type: string;
+  repositoryId: string;
+  repositoryName: string;
+  repositoryFullName: string;
+  number?: number;
+  title?: string;
+  state?: string;
+  created_at?: string;
+  updated_at?: string;
+  closed_at?: string;
+  merged_at?: string;
+  user?: {
+    login?: string;
+    avatar_url?: string;
+    id?: number;
+  };
+  [key: string]: any;
+}
+
+export interface IssueItem {
+  type: string;
+  repositoryId: string;
+  repositoryName: string;
+  repositoryFullName: string;
+  number?: number;
+  title?: string;
+  state?: string;
+  created_at?: string;
+  updated_at?: string;
+  closed_at?: string;
+  user?: {
+    login?: string;
+    avatar_url?: string;
+    id?: number;
+  };
+  history?: IssueHistoryItem[];
+  [key: string]: any;
+}
+
+export interface IssueHistoryItem {
+  issueId: string;
+  field?: string;
+  from?: string;
+  to?: string;
+  created_at?: string;
+  actor?: {
+    login?: string;
+    avatar_url?: string;
+  };
+  [key: string]: any;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class GithubService {
+  private lastRelationalDataFields: {
+    pullRequestFields: ModelField[];
+    issueFields: ModelField[];
+    commitFields: ModelField[];
+    historyFields: ModelField[];
+  } | null = null;
+  
   constructor(private httpService: HttpService) {}
 
   initiateGithubAuth(): void {
@@ -176,5 +279,33 @@ export class GithubService {
       search: searchText,
       ...params
     });
+  }
+  
+  getRelationalData(userId: string, params: {
+    repoId?: string;
+    page?: number;
+    limit?: number;
+    search?: string;
+    sort?: string;
+    sortOrder?: 'asc' | 'desc';
+    filterType?: string;
+    [key: string]: any;
+  } = {}) {
+    return this.httpService.get<RelationalDataResponse>(`/datagrid/relational-data/${userId}`, params)
+      .pipe(
+        tap(response => {
+          if (response.fields) {
+            this.lastRelationalDataFields = response.fields;
+          }
+        })
+      );
+  }
+  
+  getLastRelationalDataFields() {
+    return this.lastRelationalDataFields;
+  }
+  
+  getUserRepositories(userId: string) {
+    return this.httpService.get<{success: boolean; count: number; data: any[]}>(`/datagrid/repositories/${userId}`);
   }
 }

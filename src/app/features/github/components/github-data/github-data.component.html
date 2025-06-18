@@ -9,9 +9,11 @@
       <div class="user-detail-info">
         <p>Total {{userDetails.modelName}}s: {{totalRows}}</p>
       </div>
+      <button mat-raised-button color="accent" class="relational-grid-btn" (click)="openRelationalGrid()">
+        <mat-icon>account_tree</mat-icon> Relational View
+      </button>
     </div>
     
-    <!-- Search for user detail view -->
     <div class="search-container">
       <mat-form-field appearance="outline" class="search-field">
         <mat-label>Search</mat-label>
@@ -59,24 +61,29 @@
       <mat-form-field appearance="outline" class="search-field">
         <mat-label>Search</mat-label>
         <input matInput [(ngModel)]="searchText" 
-               placeholder="Search across all columns" 
+               placeholder="Searches in all columns of all data types" 
                (keyup)="onSearchInput()" 
                (keyup.enter)="onSearch()">
         <button *ngIf="searchText" matSuffix mat-icon-button aria-label="Clear" (click)="clearSearch()">
           <mat-icon>close</mat-icon>
         </button>
-        <mat-hint>Searches in all columns of all data types</mat-hint>
+      
       </mat-form-field>
-      <mat-checkbox class="search-all-checkbox" [(ngModel)]="searchAcrossAllCollections" color="primary">
-        Search Across All Collections
+      <mat-checkbox class="search-all-checkbox"  [title]="'Search Across All Collections'" [(ngModel)]="searchAcrossAllCollections" color="primary">
+        All Collections
       </mat-checkbox>
-      <button mat-raised-button color="primary" (click)="onSearch()">
+      <!-- <button mat-raised-button color="primary" (click)="onSearch()">
         <mat-icon>search</mat-icon> Search
-      </button>
+      </button> -->
       <button mat-button (click)="resetGrid()">
         <mat-icon>refresh</mat-icon> Reset Grid
       </button>
+      <button mat-raised-button color="accent" [title]="'Relational View'" class="relational-grid-btn" (click)="openRelationalGrid()">
+        <mat-icon>account_tree</mat-icon>
+      </button>
     </div>
+    
+    
   </div>
 
   <div *ngIf="loading" class="loading-spinner">
@@ -139,7 +146,6 @@
     </mat-card>
   </div>
   
-  <!-- Multiple grids for global search results -->
   <div *ngIf="!loading && searchAcrossAllCollections && searchResults.length > 0" class="multi-grid-container">
     <div *ngFor="let collection of searchResults; let i = index">
       <mat-expansion-panel [expanded]="i === 0">
@@ -150,7 +156,6 @@
           </mat-panel-title>
         </mat-expansion-panel-header>
         
-        <!-- Collection-specific loading spinner -->
         <div *ngIf="collectionLoading[i]" class="collection-loading-spinner">
           <mat-spinner diameter="30"></mat-spinner>
         </div>
@@ -182,7 +187,6 @@
           </ag-grid-angular>
         </div>
         
-        <!-- Individual paginator for each collection grid -->
         <mat-paginator 
           [length]="collection.totalRecords"
           [pageSize]="collectionPagination[i]?.pageSize || 10"
