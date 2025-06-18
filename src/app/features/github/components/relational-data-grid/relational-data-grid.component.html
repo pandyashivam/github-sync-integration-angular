@@ -23,23 +23,6 @@
   </div>
 
   <div class="filter-controls" *ngIf="currentRepo">
-    <div class="filter-types">
-      <mat-chip-listbox aria-label="Filter by type" [(ngModel)]="selectedFilterType" (change)="onFilterTypeChange($event)">
-        <mat-chip-option value="All" [selected]="selectedFilterType === 'All'">
-          All
-          <span class="count-badge" *ngIf="totalRows > 0">({{totalRows}})</span>
-        </mat-chip-option>
-        <mat-chip-option value="Pull Requests" [selected]="selectedFilterType === 'Pull Requests'" color="accent">
-          <mat-icon>merge_type</mat-icon> Pull Requests
-          <span class="count-badge" *ngIf="totalPRs > 0">({{totalPRs}})</span>
-        </mat-chip-option>
-        <mat-chip-option value="Issues" [selected]="selectedFilterType === 'Issues'" color="warn">
-          <mat-icon>bug_report</mat-icon> Issues
-          <span class="count-badge" *ngIf="totalIssues > 0">({{totalIssues}})</span>
-        </mat-chip-option>
-      </mat-chip-listbox>
-    </div>
-
     <div class="search-container">
       <mat-form-field appearance="outline" class="search-field">
         <mat-label>Search</mat-label>
@@ -56,26 +39,23 @@
         <mat-icon>refresh</mat-icon> Reset
       </button>
     </div>
+
+    <div class="filter-types">
+      <mat-chip-listbox aria-label="Filter by type" [(ngModel)]="selectedFilterType" (change)="onFilterTypeChange($event)">
+        <mat-chip-option value="Pull Requests" [selected]="selectedFilterType === 'Pull Requests'" color="accent">
+          <mat-icon>merge_type</mat-icon> Pull Requests
+          <span class="count-badge" *ngIf="totalPRs > 0">({{totalPRs}})</span>
+        </mat-chip-option>
+        <mat-chip-option value="Issues" [selected]="selectedFilterType === 'Issues'" color="warn">
+          <mat-icon>bug_report</mat-icon> Issues
+          <span class="count-badge" *ngIf="totalIssues > 0">({{totalIssues}})</span>
+        </mat-chip-option>
+      </mat-chip-listbox>
+    </div>
   </div>
 
   <div *ngIf="loading" class="loading-spinner">
     <mat-spinner diameter="40"></mat-spinner>
-  </div>
-
-  <div *ngIf="!loading && currentRepo" class="repo-info">
-    <h3>
-      <a [href]="currentRepo.repositoryFullName ? 'https://github.com/' + currentRepo.repositoryFullName : '#'" target="_blank">
-        {{ currentRepo.repositoryFullName || currentRepo.repositoryName }}
-      </a>
-    </h3>
-    <div class="repo-stats">
-      <span class="stat-item">
-        <mat-icon>merge_type</mat-icon> {{totalPRs}} Pull Requests
-      </span>
-      <span class="stat-item">
-        <mat-icon>bug_report</mat-icon> {{totalIssues}} Issues
-      </span>
-    </div>
   </div>
 
   <div *ngIf="!loading && currentRepo && rowData.length > 0" class="grid-container" [style]="{'height': gridHeight}">
@@ -88,18 +68,13 @@
       [rowSelection]="'multiple'"
       [masterDetail]="true"
       [detailRowHeight]="300"
-      [detailCellRenderer]="getDetailCellRenderer()"
-      [isRowMaster]="isRowMaster"
       [suppressRowClickSelection]="true"
       [enableCellTextSelection]="true"
       [suppressCellFocus]="true"
       [domLayout]="'normal'"
       [animateRows]="true"
-      [rowHeight]="48"
-  
-      [components]="{
-        avatarCellRenderer: avatarCellRenderer
-      }"
+      [rowHeight]="35"
+    
       [autoSizeStrategy]="{
         type: 'fitCellContents'
       }"

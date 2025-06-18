@@ -94,7 +94,6 @@ export class GithubDataComponent implements OnInit, OnDestroy {
   gridApi!: GridApi;
   gridHeight: string = 'calc(100vh - 150px)';
   
-  // Store grid APIs for collection grids
   collectionGridApis: GridApi[] = [];
   
   searchText: string = '';
@@ -115,10 +114,7 @@ export class GithubDataComponent implements OnInit, OnDestroy {
   
   searchResults: any[] = [];
   
-  // Add collection-specific pagination tracking
   collectionPagination: { [key: number]: { pageIndex: number, pageSize: number } } = {};
-  
-  // Add collection-specific loading indicators
   collectionLoading: { [key: number]: boolean } = {};
   
   constructor(private githubService: GithubService, private route: ActivatedRoute) {
@@ -135,7 +131,6 @@ export class GithubDataComponent implements OnInit, OnDestroy {
         this.performSearch();
       });
       
-    // Create the event handler
     this.findUserHandler = ((event: CustomEvent) => {
       this.findUser(event.detail);
     }) as EventListener;
@@ -219,82 +214,7 @@ export class GithubDataComponent implements OnInit, OnDestroy {
     
     this.loading = true;
     
-    const filterParams: any = {};
-    if (this.filterModel) {
-      Object.keys(this.filterModel).forEach(key => {
-        const filter = this.filterModel[key];
-        
-        if (filter.filterType === 'text') {
-          const textFilter = filter as TextFilterModel;
-          
-          if (textFilter.type) {
-            switch (textFilter.type) {
-              case 'contains':
-                filterParams[`${key}_contains`] = textFilter.filter;
-                break;
-              case 'notContains':
-                filterParams[`${key}_notContains`] = textFilter.filter;
-                break;
-              case 'equals':
-                filterParams[key] = textFilter.filter;
-                break;
-              case 'notEqual':
-                filterParams[`${key}_ne`] = textFilter.filter;
-                break;
-              case 'startsWith':
-                filterParams[`${key}_startsWith`] = textFilter.filter;
-                break;
-              case 'endsWith':
-                filterParams[`${key}_endsWith`] = textFilter.filter;
-                break;
-              case 'empty':
-                filterParams[`${key}_empty`] = true;
-                break;
-            }
-          } else if (textFilter.filter) {
-            filterParams[`${key}_contains`] = textFilter.filter;
-          }
-        } else if (filter.filterType === 'date') {
-          const dateFilter = filter as DateFilterModel;
-          
-          if (dateFilter.dateFrom) {
-            const date = new Date(dateFilter.dateFrom);
-            filterParams[`${key}`] = date.toISOString().split('T')[0];
-          }
-          
-          if (dateFilter.type) {
-            switch (dateFilter.type) {
-              case 'equals':
-                break;
-              case 'notEqual':
-                filterParams[`${key}_ne`] = filterParams[key];
-                delete filterParams[key];
-                break;
-              case 'greaterThan':
-                filterParams[`${key}_gt`] = filterParams[key];
-                delete filterParams[key];
-                break;
-              case 'lessThan':
-                filterParams[`${key}_lt`] = filterParams[key];
-                delete filterParams[key];
-                break;
-              case 'greaterThanOrEqual':
-                filterParams[`${key}_gte`] = filterParams[key];
-                delete filterParams[key];
-                break;
-              case 'lessThanOrEqual':
-                filterParams[`${key}_lte`] = filterParams[key];
-                delete filterParams[key];
-                break;
-            }
-          }
-        } else {
-          if (filter.filter) {
-            filterParams[key] = filter.filter;
-          }
-        }
-      });
-    }
+    const filterParams: any = this.getfilterParams();
     
     const params = {
       page: this.pageIndex + 1,
@@ -313,8 +233,8 @@ export class GithubDataComponent implements OnInit, OnDestroy {
           this.userDetailItems = response.data;
           this.totalRows = response.totalRecords;
           this.pageIndex = response.currentPage - 1;
-          
-          this.setupUserDetailGrid(response.fields);
+         
+          this.columnDefs = this.getColumnDefs(response.fields);
           this.rowData = this.userDetailItems;
           this.loading = false;
         },
@@ -325,223 +245,48 @@ export class GithubDataComponent implements OnInit, OnDestroy {
       });
   }
   
-  setupUserDetailGrid(fields: any[]): void {
-    if (!this.userDetails || !this.userDetailItems.length) {
-      return;
-    }
-    
-    this.columnDefs = [
-      {
-        headerName: 'Ticket ID',
-        field: 'id',
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        floatingFilter: true,
-        width: 120,
-        flex: 0,
-        filterParams: {
-          buttons: ['apply', 'reset'],
-          closeOnApply: true
-        },
-        // Add cell style function to highlight cells containing search text
-        cellStyle: (params: any) => {
-          if (this.searchText && params.value) {
-            const searchLower = this.searchText.toLowerCase();
-            const valueLower = params.value.toString().toLowerCase();
-            
-            if (valueLower.includes(searchLower)) {
-              return { backgroundColor: '#FFFFCC' }; // Light yellow highlight
-            }
-          }
-          return null;
-        }
-      },
-      {
-        headerName: 'Summary',
-        field: 'summary',
-        sortable: true,
-        filter: 'agTextColumnFilter',
-        floatingFilter: true,
-        flex: 2,
-        filterParams: {
-          filterOptions: [
-            'contains',
-            'notContains',
-            'equals',
-            'notEqual',
-            'startsWith', 
-            'endsWith',
-            'empty'
-          ],
-          buttons: ['apply', 'reset'],
-          closeOnApply: true,
-          debounceMs: 200
-        },
-        // Add cell style function to highlight cells containing search text
-        cellStyle: (params: any) => {
-          if (this.searchText && params.value && typeof params.value === 'string') {
-            const searchLower = this.searchText.toLowerCase();
-            const valueLower = params.value.toString().toLowerCase();
-            
-            if (valueLower.includes(searchLower)) {
-              return { backgroundColor: '#FFFFCC' }; // Light yellow highlight
-            }
-          }
-          return null;
-        }
-      },
-      {
-        headerName: 'Description',
-        field: 'description',
-        sortable: true,
-        filter: 'agTextColumnFilter',
-        floatingFilter: true,
-        flex: 3,
-        cellRenderer: (params: any) => {
-          const value = params.value || '';
-          const displayValue = value.length > 100 ? value.substring(0, 100) + '...' : value;
-          
-          // Add highlighting for search text
-          if (this.searchText && typeof value === 'string') {
-            const searchLower = this.searchText.toLowerCase();
-            const valueLower = value.toLowerCase();
-            
-            if (valueLower.includes(searchLower)) {
-              return `<div style="background-color: #FFFFCC;">${displayValue}</div>`;
-            }
-          }
-          
-          return displayValue;
-        },
-        filterParams: {
-          filterOptions: [
-            'contains',
-            'notContains',
-            'equals',
-            'notEqual',
-            'startsWith', 
-            'endsWith',
-            'empty'
-          ],
-          buttons: ['apply', 'reset'],
-          closeOnApply: true,
-          debounceMs: 200
-        }
-      },
-      {
-        headerName: 'State',
-        field: 'state',
-        sortable: true,
-        filter: 'agTextColumnFilter',
-        floatingFilter: true,
-        width: 120,
-        flex: 0,
-        filterParams: {
-          filterOptions: [
-            'contains',
-            'notContains',
-            'equals',
-            'notEqual',
-            'startsWith', 
-            'endsWith',
-            'empty'
-          ],
-          buttons: ['apply', 'reset'],
-          closeOnApply: true,
-          debounceMs: 200
-        },
-        // Add cell style function to highlight cells containing search text
-        cellStyle: (params: any) => {
-          if (this.searchText && params.value && typeof params.value === 'string') {
-            const searchLower = this.searchText.toLowerCase();
-            const valueLower = params.value.toString().toLowerCase();
-            
-            if (valueLower.includes(searchLower)) {
-              return { backgroundColor: '#FFFFCC' }; // Light yellow highlight
-            }
-          }
-          return null;
-        }
-      },
-      {
-        headerName: 'Date',
-        field: 'created_at',
-        sortable: true,
-        filter: 'agDateColumnFilter',
-        floatingFilter: true,
-        flex: 1,
-        valueFormatter: (params: ValueFormatterParams) => {
-          if (params.value) {
-            const date = new Date(params.value);
-            if (!isNaN(date.getTime())) {
-              return date.toLocaleDateString('en-US', {
-                month: '2-digit',
-                day: '2-digit',
-                year: 'numeric'
-              });
-            }
-          }
-          return params.value;
-        },
-        // Add cell style function to highlight cells containing search text
-        cellStyle: (params: any) => {
-          if (this.searchText && params.value) {
-            const searchLower = this.searchText.toLowerCase();
-            const formattedDate = new Date(params.value).toLocaleDateString('en-US', {
-              month: '2-digit',
-              day: '2-digit',
-              year: 'numeric'
-            }).toLowerCase();
-            
-            if (formattedDate.includes(searchLower)) {
-              return { backgroundColor: '#FFFFCC' }; // Light yellow highlight
-            }
-          }
-          return null;
-        },
-        filterParams: {
-          buttons: ['apply', 'reset'],
-          closeOnApply: true,
-          filterOptions: [
-            'equals',
-            'notEqual',
-            'greaterThan',
-            'lessThan',
-            'greaterThanOrEqual',
-            'lessThanOrEqual'
-          ],
-          comparator: (filterLocalDateAtMidnight: Date, cellValue: string) => {
-            if (!cellValue) return -1;
-            const cellDate = new Date(cellValue);
-            
-            // Compare dates without time component for exact date matching
-            const filterDate = new Date(filterLocalDateAtMidnight);
-            const cellDateOnly = new Date(cellDate.getFullYear(), cellDate.getMonth(), cellDate.getDate());
-            const filterDateOnly = new Date(filterDate.getFullYear(), filterDate.getMonth(), filterDate.getDate());
-            
-            if (filterDateOnly.getTime() === cellDateOnly.getTime()) {
-              return 0;
-            }
-            if (cellDateOnly < filterDateOnly) {
-              return -1;
-            }
-            if (cellDateOnly > filterDateOnly) {
-              return 1;
-            }
-            return 0;
-          },
-          debounceMs: 200
-        }
-      }
-    ];
-  }
   
   loadData(): void {
     if (!this.selectedUser || !this.selectedModel) return;
     
     this.loading = true;
     
-    const filterParams: any = {};
+    const filterParams: any = this.getfilterParams();
+    
+    const params = {
+      userId: this.selectedUser._id || '',
+      page: this.pageIndex + 1,
+      limit: this.pageSize,
+      search: this.searchText || undefined,
+      sort: this.sortModel.field || 'createdAt',
+      sortOrder: this.sortModel.sort || 'desc',
+      ...filterParams
+    };
+    
+    this.githubService.getModelData(this.selectedModel, params).subscribe({
+      next: (response) => {
+        this.totalRows = response.totalRecords;
+        this.rowData = response.data;
+        
+        this.columnDefs = this.getColumnDefs(response.fields);
+        this.userLinkColDef();
+        this.loading = false;
+        
+        setTimeout(() => {
+          if (this.gridApi) {
+            this.gridApi.sizeColumnsToFit();
+          }
+        }, 100);
+      },
+      error: (error) => {
+        console.error('Error loading data:', error);
+        this.loading = false;
+      }
+    });
+  }
+
+  getfilterParams(){
+    let filterParams: any = {};
     if (this.filterModel) {
       Object.keys(this.filterModel).forEach(key => {
         const filter = this.filterModel[key];
@@ -617,24 +362,59 @@ export class GithubDataComponent implements OnInit, OnDestroy {
         }
       });
     }
+    return filterParams;
+  }
+
+  userLinkColDef(){
+
+    if (this.selectedModel === 'PullRequest') {
+      this.columnDefs.unshift({
+        headerName: '',
+        field: 'findUser',
+        width: 100,
+        flex: 0,
+        sortable: false,
+        filter: false,
+        floatingFilter: false,
+        cellRenderer: (params: any) => {
+          // Check if the row data has assignee with an id
+          if (params.data && params.data.assignee && params.data.assignee.id) {
+            const assigneeId = params.data.assignee.id;
+            return `<a href="javascript:void(0)" 
+                     onclick="document.dispatchEvent(new CustomEvent('findUser', 
+                     { detail: {'assigneeId': '${assigneeId}', 'ModelName': 'PullRequest' } }))">Find User</a>`;
+          }
+          return '';
+        }
+      });
+    }
     
-    const params = {
-      userId: this.selectedUser._id || '',
-      page: this.pageIndex + 1,
-      limit: this.pageSize,
-      search: this.searchText || undefined,
-      sort: this.sortModel.field || 'createdAt',
-      sortOrder: this.sortModel.sort || 'desc',
-      ...filterParams
-    };
-    
-    this.githubService.getModelData(this.selectedModel, params).subscribe({
-      next: (response) => {
-        this.totalRows = response.totalRecords;
-        this.rowData = response.data;
-        
-        this.columnDefs = response.fields
-          .filter(field => {
+
+    if (this.selectedModel === 'Issue') {
+      this.columnDefs.unshift({
+        headerName: '',
+        field: 'findUser',
+        width: 100,
+        flex: 0,
+        sortable: false,
+        filter: false,
+        floatingFilter: false,
+        cellRenderer: (params: any) => {
+          // Check if the row data has closed_by with an id
+          if (params.data && params.data.closed_by && params.data.closed_by.id) {
+            const closedById = params.data.closed_by.id;
+            return `<a href="javascript:void(0)" 
+                     onclick="document.dispatchEvent(new CustomEvent('findUser', 
+                     { detail: {'assigneeId': '${closedById}', 'ModelName': 'Issue' } }))">Find User</a>`;
+          }
+          return '';
+        }
+      });
+    }
+  }
+
+  getColumnDefs(fields: any[]) {
+   return fields.filter(field => {
             // Skip fields that are complex objects based on first row's data
             if (this.rowData.length > 0) {
               const firstRowValue = this.rowData[0][field.field];
@@ -764,66 +544,6 @@ export class GithubDataComponent implements OnInit, OnDestroy {
           
           return colDef;
         });
-
-        if (this.selectedModel === 'PullRequest') {
-          this.columnDefs.unshift({
-            headerName: '',
-            field: 'findUser',
-            width: 100,
-            flex: 0,
-            sortable: false,
-            filter: false,
-            floatingFilter: false,
-            cellRenderer: (params: any) => {
-              // Check if the row data has assignee with an id
-              if (params.data && params.data.assignee && params.data.assignee.id) {
-                const assigneeId = params.data.assignee.id;
-                return `<a href="javascript:void(0)" 
-                         onclick="document.dispatchEvent(new CustomEvent('findUser', 
-                         { detail: {'assigneeId': '${assigneeId}', 'ModelName': 'PullRequest' } }))">Find User</a>`;
-              }
-              return '';
-            }
-          });
-        }
-        
-
-        if (this.selectedModel === 'Issue') {
-          this.columnDefs.unshift({
-            headerName: '',
-            field: 'findUser',
-            width: 100,
-            flex: 0,
-            sortable: false,
-            filter: false,
-            floatingFilter: false,
-            cellRenderer: (params: any) => {
-              // Check if the row data has closed_by with an id
-              if (params.data && params.data.closed_by && params.data.closed_by.id) {
-                const closedById = params.data.closed_by.id;
-                return `<a href="javascript:void(0)" 
-                         onclick="document.dispatchEvent(new CustomEvent('findUser', 
-                         { detail: {'assigneeId': '${closedById}', 'ModelName': 'Issue' } }))">Find User</a>`;
-              }
-              return '';
-            }
-          });
-        }
-        
-        this.loading = false;
-        
-        setTimeout(() => {
-          if (this.gridApi) {
-            this.gridApi.sizeColumnsToFit();
-
-          }
-        }, 100);
-      },
-      error: (error) => {
-        console.error('Error loading data:', error);
-        this.loading = false;
-      }
-    });
   }
   
   onGridReady(params: GridReadyEvent): void {
@@ -885,12 +605,10 @@ export class GithubDataComponent implements OnInit, OnDestroy {
   onSearchInput(): void {
     this.searchDebounce.next(this.searchText);
     
-    // Refresh the grid to apply highlighting without reloading data
     if (this.gridApi && !this.searchAcrossAllCollections) {
       this.gridApi.refreshCells({ force: true });
     }
-    
-    // Refresh collection grids if they exist
+
     if (this.collectionGridApis.length > 0) {
       this.collectionGridApis.forEach(api => {
         if (api) {
@@ -922,16 +640,9 @@ export class GithubDataComponent implements OnInit, OnDestroy {
     }).subscribe({
       next: (response: any) => {
         this.totalRows = response.totalRecords || 0;
-        
-        // Clear existing row data and column definitions
         this.rowData = [];
         this.columnDefs = [];
-        
-        // Set the response data directly - this will be used for rendering multiple grids
-        // in the template
         this.searchResults = response.data || [];
-        
-        // Initialize collection pagination tracking and loading indicators
         this.searchResults.forEach((collection, index) => {
           this.collectionPagination[index] = {
             pageIndex: 0,
@@ -956,8 +667,6 @@ export class GithubDataComponent implements OnInit, OnDestroy {
   clearSearch(): void {
     this.searchText = '';
     this.searchResults = [];
-    
-    // If we were in global search mode, reset the grid completely
     if (this.searchAcrossAllCollections) {
       this.resetGrid();
       return;
@@ -1018,153 +727,6 @@ export class GithubDataComponent implements OnInit, OnDestroy {
       .trim();
   }
 
-  getCollectionColumnDefs(collection: any): ColDef[] {
-    if (!collection || !collection.data || collection.data.length === 0) {
-      return [];
-    }
-    
-    const firstItem = collection.data[0];
-    const columnDefs: ColDef[] = [];
-    
-    if (firstItem.user?.avatar_url || 
-        firstItem.assignee?.avatar_url || 
-        firstItem.closed_by?.avatar_url ||
-        firstItem.author?.avatar_url) {
-      
-      columnDefs.push({
-        headerName: '',
-        field: 'avatar',
-        width: 60,
-        flex: 0,
-        sortable: false,
-        filter: false,
-        floatingFilter: false,
-        cellRenderer: (params: any) => {
-          const avatarUrl = 
-            params.data.user?.avatar_url || 
-            params.data.assignee?.avatar_url || 
-            params.data.closed_by?.avatar_url ||
-            params.data.author?.avatar_url;
-            
-          if (avatarUrl) {
-            return `<img src="${avatarUrl}" alt="Avatar" style="width: 30px; height: 30px; border-radius: 50%;" />`;
-          }
-          return '';
-        }
-      });
-    }
-    
-    const regularColumns = (collection.fields || [])
-      .filter((field: { field: string, type: string }) => 
-        field.type !== 'object' && 
-        field.type !== 'array'
-      )
-      .map((field: { field: string, type: string }) => {
-        const colDef: ColDef = {
-          field: field.field,
-          headerName: this.formatHeaderName(field.field),
-          sortable: true,
-          filter: false,
-          floatingFilter: false,
-          cellStyle: (params: any) => {
-            if (this.searchText && params.value && typeof params.value === 'string') {
-              const searchLower = this.searchText.toLowerCase();
-              const valueLower = params.value.toString().toLowerCase();
-              
-              if (valueLower.includes(searchLower)) {
-                return { backgroundColor: '#FFFFCC' };
-              }
-            }
-            return null;
-          }
-        };
-        
-        const fieldName = field.field.toLowerCase();
-        if (fieldName === 'avatar_url' || 
-            fieldName === 'avatarurl' || 
-            fieldName === 'avatar' || 
-            fieldName.includes('avatar_url') || 
-            fieldName.includes('avatarurl')) {
-          colDef.cellRenderer = AvatarCellComponent;
-          colDef.width = 80;
-          colDef.flex = 0;
-        } else if (field.type === 'date' || 
-                  fieldName.includes('date') || 
-                  fieldName.includes('created') || 
-                  fieldName.includes('updated')) {
-          colDef.valueFormatter = (params) => {
-            if (params.value) {
-              const date = new Date(params.value);
-              if (!isNaN(date.getTime())) {
-                  return date.toLocaleDateString('en-US', {
-                    month: '2-digit',
-                    day: '2-digit',
-                    year: 'numeric'
-                  });
-              }
-            }
-            return params.value;
-          };
-        }
-        
-        return colDef;
-      });
-    
-    const filteredColumns = regularColumns.filter((col: ColDef, index: number, self: ColDef[]) => {
-      if (!col.field) return false;
-      
-      return (
-        index === self.findIndex((c: ColDef) => c.field === col.field) &&
-        !col.field.startsWith('_') &&
-        !['__v', '__proto__', 'constructor'].includes(col.field)
-      );
-    });
-    
-    columnDefs.push(...filteredColumns);
-    
-    if (collection.collectionName === 'PullRequest') {
-      columnDefs.unshift({
-        headerName: '',
-        field: 'findUser',
-        width: 100,
-        flex: 0,
-        sortable: false,
-        filter: false,
-        floatingFilter: false,
-        cellRenderer: (params: any) => {
-          if (params.data && params.data.assignee && params.data.assignee.id) {
-            const assigneeId = params.data.assignee.id;
-            return `<a href="javascript:void(0)" 
-                     onclick="document.dispatchEvent(new CustomEvent('findUser', 
-                     { detail: {'assigneeId': '${assigneeId}', 'ModelName': 'PullRequest' } }))">Find User</a>`;
-          }
-          return '';
-        }
-      });
-    } else if (collection.collectionName === 'Issue') {
-      columnDefs.unshift({
-        headerName: '',
-        field: 'findUser',
-        width: 100,
-        flex: 0,
-        sortable: false,
-        filter: false,
-        floatingFilter: false,
-        cellRenderer: (params: any) => {
-          if (params.data && params.data.closed_by && params.data.closed_by.id) {
-            const closedById = params.data.closed_by.id;
-            return `<a href="javascript:void(0)" 
-                     onclick="document.dispatchEvent(new CustomEvent('findUser', 
-                     { detail: {'assigneeId': '${closedById}', 'ModelName': 'Issue' } }))">Find User</a>`;
-          }
-          return '';
-        }
-      });
-    }
-    
-    return columnDefs;
-  }
-  
   findUser(detail: any): void {
     const assigneeId = detail.assigneeId;
     const ModelName = detail.ModelName;
@@ -1186,49 +748,38 @@ export class GithubDataComponent implements OnInit, OnDestroy {
   }
 
   onCollectionPageChange(event: PageEvent, index: number, collection: any): void {
-    // Store pagination state for this collection
     this.collectionPagination[index] = {
       pageIndex: event.pageIndex,
       pageSize: event.pageSize
     };
-    
-    // Load the paginated data for this specific collection
+   
     this.loadCollectionData(collection.collectionName, index, event.pageIndex + 1, event.pageSize);
   }
   
   loadCollectionData(collectionName: string, index: number, page: number, limit: number): void {
     if (!this.selectedUser || !this.selectedUser._id) return;
     
-    // Show loading indicator for this collection
     this.collectionLoading[index] = true;
     
     this.githubService.searchAcrossAllCollections(this.selectedUser._id, this.searchText, {
       page: page,
       limit: limit,
-      collectionName: collectionName // Add this parameter to filter by collection name
+      collectionName: collectionName
     }).subscribe({
       next: (response: any) => {
-        // Find and update the specific collection in searchResults
         if (response.data && response.data.length > 0) {
           const collectionData = response.data.find((c: any) => c.collectionName === collectionName);
           if (collectionData) {
-            // Update just this collection's data
             this.searchResults[index] = collectionData;
-            
-            // Refresh the grid
             if (this.collectionGridApis[index]) {
-              // Use the correct method to update row data
               this.collectionGridApis[index].setGridOption('rowData', collectionData.data);
             }
           }
         }
-        
-        // Hide loading indicator
         this.collectionLoading[index] = false;
       },
       error: (error: any) => {
         console.error(`Error loading paginated data for collection ${collectionName}:`, error);
-        // Hide loading indicator on error
         this.collectionLoading[index] = false;
       }
     });

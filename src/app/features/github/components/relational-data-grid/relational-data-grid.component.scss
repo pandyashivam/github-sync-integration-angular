@@ -440,3 +440,17 @@ mat-card {
     padding: 12px;
   }
 }
+
+:host ::ng-deep .ag-cell-highlight {
+  background-color: #FFFFCC !important;
+  transition: background-color 0.3s;
+}
+
+:host ::ng-deep .ag-cell-highlight:hover {
+  background-color: #FFFF99 !important;
+}
+
+:host ::ng-deep .ag-cell[style*="background-color: rgb(255, 255, 204)"] {
+  border: 1px solid #FFD700;
+  box-shadow: 0 0 2px rgba(255, 215, 0, 0.5);
+}
