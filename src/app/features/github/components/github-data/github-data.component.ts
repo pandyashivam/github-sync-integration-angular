@@ -379,11 +379,11 @@ export class GithubDataComponent implements OnInit, OnDestroy {
 
     if (this.selectedModel === 'PullRequest') {
       this.columnDefs.unshift({
-        headerName: '',
+        headerName: 'findUser',
         field: 'findUser',
         width: 100,
         flex: 0,
-        sortable: false,
+        sortable: true,
         filter: false,
         floatingFilter: false,
         cellRenderer: (params: any) => {
@@ -402,11 +402,11 @@ export class GithubDataComponent implements OnInit, OnDestroy {
 
     if (this.selectedModel === 'Issue') {
       this.columnDefs.unshift({
-        headerName: '',
+        headerName: 'findUser',
         field: 'findUser',
         width: 100,
         flex: 0,
-        sortable: false,
+        sortable: true,
         filter: false,
         floatingFilter: false,
         cellRenderer: (params: any) => {

@@ -44,10 +44,20 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { Subject, debounceTime } from 'rxjs';
 import { AvatarCellComponent } from '../avatar-cell/avatar-cell.component';
 import { RelationalDetailComponent } from '../relational-detail/relational-detail.component';
 import { CustomTooltipComponent } from '../custom-tooltip/custom-tooltip.component';
+import { CustomFilterDialogComponent } from '../custom-filter-dialog/custom-filter-dialog.component';
+
+interface CustomFilter {
+  field: string;
+  operation: string;
+  value: any;
+  type: string;
+  secondValue?: any;
+}
 
 @Component({
   selector: 'app-relational-data-grid',
@@ -72,6 +82,7 @@ import { CustomTooltipComponent } from '../custom-tooltip/custom-tooltip.compone
     MatBadgeModule,
     MatDatepickerModule,
     MatNativeDateModule,
+    MatDialogModule,
   ],
   templateUrl: './relational-data-grid.component.html',
   styleUrl: './relational-data-grid.component.scss'
@@ -133,6 +144,7 @@ export class RelationalDataGridComponent implements OnInit {
   selectedState: string = 'all';
   closedAtFrom: Date | null = null;
   closedAtTo: Date | null = null;
+  customFilters: CustomFilter[] = [];
   
   searchText: string = '';
   searchDebounce: Subject<string> = new Subject<string>();
@@ -151,7 +163,10 @@ export class RelationalDataGridComponent implements OnInit {
   // Context object for the grid
   gridContext: any = {};
   
-  constructor(private githubService: GithubService) {
+  constructor(
+    private githubService: GithubService,
+    private dialog: MatDialog
+  ) {
     this.searchDebounce
       .pipe(debounceTime(300))
       .subscribe(() => {
@@ -250,6 +265,68 @@ export class RelationalDataGridComponent implements OnInit {
 
     const filterParams: any = this.getfilterParams();
     
+    // Add custom filters
+    if (this.customFilters && this.customFilters.length > 0) {
+      this.customFilters.forEach(filter => {
+        // Handle different operations based on field type
+        if (filter.type === 'date') {
+          if (filter.operation === 'between' && filter.secondValue) {
+            filterParams[`${filter.field}_gte`] = new Date(filter.value).toISOString().split('T')[0];
+            filterParams[`${filter.field}_lte`] = new Date(filter.secondValue).toISOString().split('T')[0];
+          } else if (filter.operation === 'equals') {
+            filterParams[filter.field] = new Date(filter.value).toISOString().split('T')[0];
+          } else if (filter.operation === 'notEqual') {
+            filterParams[`${filter.field}_ne`] = new Date(filter.value).toISOString().split('T')[0];
+          } else if (filter.operation === 'greaterThan') {
+            filterParams[`${filter.field}_gt`] = new Date(filter.value).toISOString().split('T')[0];
+          } else if (filter.operation === 'lessThan') {
+            filterParams[`${filter.field}_lt`] = new Date(filter.value).toISOString().split('T')[0];
+          }
+        } else if (filter.type === 'number') {
+          if (filter.operation === 'equals') {
+            filterParams[filter.field] = filter.value;
+          } else if (filter.operation === 'notEqual') {
+            filterParams[`${filter.field}_ne`] = filter.value;
+          } else if (filter.operation === 'greaterThan') {
+            filterParams[`${filter.field}_gt`] = filter.value;
+          } else if (filter.operation === 'lessThan') {
+            filterParams[`${filter.field}_lt`] = filter.value;
+          } else if (filter.operation === 'greaterThanOrEqual') {
+            filterParams[`${filter.field}_gte`] = filter.value;
+          } else if (filter.operation === 'lessThanOrEqual') {
+            filterParams[`${filter.field}_lte`] = filter.value;
+          }
+        } else if (filter.field === 'state') {
+          if (filter.operation === 'equals' && filter.value !== 'all') {
+            filterParams.state_filter = filter.value;
+          } else if (filter.operation === 'notEqual') {
+            filterParams[`state_ne`] = filter.value;
+          }
+        } else if (filter.type === 'string') {
+          if (filter.operation === 'equals') {
+            filterParams[filter.field] = filter.value;
+          } else if (filter.operation === 'notEqual') {
+            filterParams[`${filter.field}_ne`] = filter.value;
+          } else if (filter.operation === 'contains') {
+            filterParams[`${filter.field}_contains`] = filter.value;
+          } else if (filter.operation === 'notContains') {
+            filterParams[`${filter.field}_notContains`] = filter.value;
+          } else if (filter.operation === 'startsWith') {
+            filterParams[`${filter.field}_startsWith`] = filter.value;
+          } else if (filter.operation === 'endsWith') {
+            filterParams[`${filter.field}_endsWith`] = filter.value;
+          } else if (filter.operation === 'empty') {
+            filterParams[`${filter.field}_empty`] = true;
+          }
+        } else if (filter.operation === 'in' && Array.isArray(filter.value)) {
+          // For user fields with multiple values
+          filterParams[`${filter.field}_in`] = filter.value.join(',');
+        } else if (filter.operation === 'notIn' && Array.isArray(filter.value)) {
+          filterParams[`${filter.field}_notIn`] = filter.value.join(',');
+        }
+      });
+    }
+    
     const params: any = {
       page: this.pageIndex + 1,
       limit: this.pageSize,
@@ -286,7 +363,6 @@ export class RelationalDataGridComponent implements OnInit {
     
     this.githubService.getRelationalData(userId, params).subscribe({
       next: (response: RelationalDataResponse) => {
-
         this.relationshipData = response.data || [];
         this.relationshipFields = response.fields;
         this.availableStates = response.availableStates || [];
@@ -690,8 +766,51 @@ export class RelationalDataGridComponent implements OnInit {
     this.selectedState = 'all';
     this.closedAtFrom = null;
     this.closedAtTo = null;
+    this.customFilters = [];
     this.pageIndex = 0;
     this.loadRelationalData();
   }
   
+  removeCustomFilter(filter: CustomFilter): void {
+    this.customFilters = this.customFilters.filter(f => f !== filter);
+    this.loadRelationalData();
+  }
+  
+  openCustomFilterDialog(): void {
+    let fields: ModelField[] = [];
+    
+    // Get the appropriate fields based on the selected filter type
+    if (this.relationshipFields) {
+      if (this.selectedFilterType === 'Pull Requests') {
+        fields = this.relationshipFields.pullRequestFields || [];
+      } else if (this.selectedFilterType === 'Issues') {
+        fields = this.relationshipFields.issueFields || [];
+      }
+    }
+    
+    const dialogRef = this.dialog.open(CustomFilterDialogComponent, {
+      width: '1200px',
+      maxWidth: '98vw',
+      maxHeight: '95vh',
+      panelClass: 'custom-filter-dialog-container',
+      autoFocus: false,
+      disableClose: true,
+      data: {
+        fields: fields,
+        availableStates: this.availableStates,
+        existingFilters: this.customFilters,
+        userId: this.selectedUser?._id,
+        repoId: this.selectedRepository?._id,
+        filterType: this.selectedFilterType
+      }
+    });
+    
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.customFilters = result;
+        this.pageIndex = 0; // Reset to first page
+        this.loadRelationalData();
+      }
+    });
+  }
 }

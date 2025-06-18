@@ -1,0 +1,118 @@
+<div class="custom-filter-dialog">
+  <h2 mat-dialog-title>Custom Filters</h2>
+  
+  <mat-dialog-content>
+    <form [formGroup]="filterForm">
+      <div formArrayName="conditions">
+        <div *ngFor="let condition of conditions.controls; let i = index" [formGroupName]="i" class="filter-condition">
+          <div class="condition-row">
+            <!-- Field Select -->
+            <mat-form-field appearance="outline">
+              <mat-label>Field</mat-label>
+              <mat-select formControlName="field" (selectionChange)="onFieldChange(i)">
+                <mat-option *ngFor="let field of fields" [value]="field.field">
+                  {{ field.field }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+            
+            <!-- Operation Select -->
+            <mat-form-field appearance="outline">
+              <mat-label>Operation</mat-label>
+              <mat-select formControlName="operation" (selectionChange)="onOperationChange(i)">
+                <mat-option *ngFor="let op of getOperationsForField(condition.get('field')?.value)" [value]="op.value">
+                  {{ op.label }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+            
+            <!-- Value Input - For String/Number fields -->
+            <mat-form-field appearance="outline" *ngIf="!isUserField(condition.get('field')?.value) && 
+                                                      !isStateField(condition.get('field')?.value) && 
+                                                      !isDateField(condition.get('field')?.value) && 
+                                                      condition.get('operation')?.value !== 'empty'">
+              <mat-label>Value</mat-label>
+              <input matInput formControlName="value">
+            </mat-form-field>
+            
+            <!-- Value Select - For State fields -->
+            <mat-form-field appearance="outline" *ngIf="isStateField(condition.get('field')?.value) && 
+                                                      condition.get('operation')?.value !== 'empty'">
+              <mat-label>State</mat-label>
+              <mat-select formControlName="value">
+                <mat-option *ngFor="let state of availableStates" [value]="state">
+                  {{ state }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+            
+            <!-- Value Select - For User fields -->
+            <mat-form-field appearance="outline" class="user-select-field" *ngIf="isUserField(condition.get('field')?.value) && 
+                                                      condition.get('operation')?.value !== 'empty'">
+              <mat-label>Users</mat-label>
+              <mat-select formControlName="value" multiple>
+                <ng-container *ngIf="(getUserOptions(condition.get('field')?.value || '') || []).length; else noUsers">
+                  <mat-option *ngFor="let user of getUserOptions(condition.get('field')?.value || '')" [value]="user.login">
+                    <div class="user-option">
+                      <img *ngIf="user.avatar_url" [src]="user.avatar_url" class="user-avatar" alt="{{ user.login }}">
+                      {{ user.login }}
+                    </div>
+                  </mat-option>
+                </ng-container>
+                <ng-template #noUsers>
+                  <mat-option disabled>No users available</mat-option>
+                </ng-template>
+              </mat-select>
+              <mat-spinner *ngIf="isFieldLoading(condition.get('field')?.value || '')" diameter="20" matSuffix></mat-spinner>
+              <mat-hint *ngIf="(getUserOptions(condition.get('field')?.value || '') || []).length > 0">
+                {{ (getUserOptions(condition.get('field')?.value || '') || []).length }} users available
+              </mat-hint>
+            </mat-form-field>
+            
+            <!-- Date Input - For Date fields -->
+            <ng-container *ngIf="isDateField(condition.get('field')?.value) && condition.get('operation')?.value !== 'empty'">
+              <mat-form-field appearance="outline" *ngIf="condition.get('operation')?.value !== 'between'">
+                <mat-label>Date</mat-label>
+                <input matInput [matDatepicker]="picker" formControlName="value">
+                <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+                <mat-datepicker #picker></mat-datepicker>
+              </mat-form-field>
+              
+              <!-- Date Range - For Between operation -->
+              <ng-container *ngIf="condition.get('operation')?.value === 'between'">
+                <mat-form-field appearance="outline">
+                  <mat-label>From</mat-label>
+                  <input matInput [matDatepicker]="fromPicker" formControlName="value">
+                  <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
+                  <mat-datepicker #fromPicker></mat-datepicker>
+                </mat-form-field>
+                
+                <mat-form-field appearance="outline">
+                  <mat-label>To</mat-label>
+                  <input matInput [matDatepicker]="toPicker" formControlName="secondValue">
+                  <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
+                  <mat-datepicker #toPicker></mat-datepicker>
+                </mat-form-field>
+              </ng-container>
+            </ng-container>
+            
+            <!-- Remove Button -->
+            <button mat-icon-button color="warn" type="button" (click)="removeCondition(i)" aria-label="Remove filter">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Add Filter Button -->
+      <button mat-stroked-button color="primary" type="button" (click)="addCondition()">
+        <mat-icon>add</mat-icon> Add Filter
+      </button>
+    </form>
+  </mat-dialog-content>
+  
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="cancel()">Cancel</button>
+    <button mat-raised-button color="primary" (click)="applyFilters()">Apply Filters</button>
+  </mat-dialog-actions>
+</div> 

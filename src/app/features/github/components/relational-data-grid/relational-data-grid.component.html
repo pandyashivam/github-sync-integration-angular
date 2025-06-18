@@ -81,9 +81,24 @@
           <mat-datepicker #toPicker></mat-datepicker>
         </mat-form-field>
         
+        <button mat-button color="primary" (click)="openCustomFilterDialog()">
+          <mat-icon>filter_list</mat-icon> Advanced Filters
+        </button>
+        
         <button mat-button color="primary" (click)="resetFilters()">
           <mat-icon>filter_alt_off</mat-icon> Reset Filters
         </button>
+      </div>
+      
+      <!-- Display active custom filters as chips -->
+      <div class="active-filters" *ngIf="customFilters && customFilters.length > 0">
+        <span class="filter-label">Active filters:</span>
+        <mat-chip-listbox>
+          <mat-chip-option *ngFor="let filter of customFilters" [selected]="true" [removable]="true" (removed)="removeCustomFilter(filter)">
+            {{ filter.field }} {{ filter.operation }} {{ filter.value }}
+            <mat-icon matChipRemove>cancel</mat-icon>
+          </mat-chip-option>
+        </mat-chip-listbox>
       </div>
     </div>
   </div>

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpHeaders } from '@angular/common/http';
+import { HttpHeaders, HttpParams } from '@angular/common/http';
 import { HttpService } from '../../../shared/services/http.service';
-import { Observable, BehaviorSubject, interval } from 'rxjs';
+import { Observable, BehaviorSubject, interval, throwError } from 'rxjs';
 import { tap, switchMap, catchError, map } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 
@@ -110,19 +110,25 @@ export interface RelationalDataResponse {
   success: boolean;
   count: number;
   totalCount: number;
-  currentPage: number;
-  totalPages: number;
   totalPRs: number;
   totalIssues: number;
+  currentPage: number;
+  totalPages: number;
   repositories: any[];
-  availableStates?: string[];
+  availableStates: string[];
   data: RepoRelationship[];
-  fields?: {
+  fields: {
     pullRequestFields: ModelField[];
     issueFields: ModelField[];
     commitFields: ModelField[];
     historyFields: ModelField[];
   };
+}
+
+export interface DistinctFieldValuesResponse {
+  success: boolean;
+  count: number;
+  data: any[];
 }
 
 export interface RepoRelationship {
@@ -308,5 +314,21 @@ export class GithubService {
   
   getUserRepositories(userId: string) {
     return this.httpService.get<{success: boolean; count: number; data: any[]}>(`/datagrid/repositories/${userId}`);
+  }
+
+  getDistinctFieldValues(userId: string, repoId: string, filterType: string, fieldPath: string): Observable<DistinctFieldValuesResponse> {
+    console.log('Service getDistinctFieldValues called with:', {userId, repoId, filterType, fieldPath});
+    
+    if (!fieldPath) {
+      console.error('Field path is required');
+      return throwError(() => new Error('Field path is required'));
+    }
+    
+    const params = new HttpParams()
+      .set('repoId', repoId || '')
+      .set('filterType', filterType || 'Pull Requests')
+      .set('fieldPath', fieldPath);
+      
+    return this.httpService.get<DistinctFieldValuesResponse>(`/datagrid/distinct-values/${userId}`, { params });
   }
 }
