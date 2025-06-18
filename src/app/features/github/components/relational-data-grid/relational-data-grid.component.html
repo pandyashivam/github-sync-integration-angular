@@ -52,6 +52,40 @@
         </mat-chip-option>
       </mat-chip-listbox>
     </div>
+    
+    <div class="custom-filters">
+      <div class="filter-row">
+        <!-- State filter -->
+        <mat-form-field appearance="outline" class="filter-field" style="max-width: 200px;">
+          <mat-label>State</mat-label>
+          <mat-select [(ngModel)]="selectedState" (selectionChange)="onStateFilterChange($event)">
+            <mat-option value="all">All</mat-option>
+            <mat-option *ngFor="let state of availableStates" [value]="state">
+              {{ state }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        
+        <!-- Date range filter for closed_at -->
+        <mat-form-field appearance="outline" style="max-width: 200px;" class="filter-field" *ngIf="selectedState === 'closed'">
+          <mat-label>Closed From</mat-label>
+          <input matInput [matDatepicker]="fromPicker" [(ngModel)]="closedAtFrom" (dateChange)="onDateRangeChange()">
+          <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
+          <mat-datepicker #fromPicker></mat-datepicker>
+        </mat-form-field>
+        
+        <mat-form-field appearance="outline" style="max-width: 200px;" class="filter-field" *ngIf="selectedState === 'closed'">
+          <mat-label>Closed To</mat-label>
+          <input matInput [matDatepicker]="toPicker" [(ngModel)]="closedAtTo" (dateChange)="onDateRangeChange()">
+          <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
+          <mat-datepicker #toPicker></mat-datepicker>
+        </mat-form-field>
+        
+        <button mat-button color="primary" (click)="resetFilters()">
+          <mat-icon>filter_alt_off</mat-icon> Reset Filters
+        </button>
+      </div>
+    </div>
   </div>
 
   <div *ngIf="loading" class="loading-spinner">

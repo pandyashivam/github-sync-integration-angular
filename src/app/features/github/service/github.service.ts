@@ -115,6 +115,7 @@ export interface RelationalDataResponse {
   totalPRs: number;
   totalIssues: number;
   repositories: any[];
+  availableStates?: string[];
   data: RepoRelationship[];
   fields?: {
     pullRequestFields: ModelField[];

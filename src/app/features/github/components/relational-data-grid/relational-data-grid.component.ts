@@ -42,6 +42,8 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatBadgeModule } from '@angular/material/badge';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { Subject, debounceTime } from 'rxjs';
 import { AvatarCellComponent } from '../avatar-cell/avatar-cell.component';
 import { RelationalDetailComponent } from '../relational-detail/relational-detail.component';
@@ -68,6 +70,8 @@ import { CustomTooltipComponent } from '../custom-tooltip/custom-tooltip.compone
     MatTabsModule,
     MatChipsModule,
     MatBadgeModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
   ],
   templateUrl: './relational-data-grid.component.html',
   styleUrl: './relational-data-grid.component.scss'
@@ -123,6 +127,12 @@ export class RelationalDataGridComponent implements OnInit {
   // Filter options
   filterTypes: string[] = ['Pull Requests', 'Issues'];
   selectedFilterType: string = 'Pull Requests';
+  
+  // Custom filters
+  availableStates: string[] = [];
+  selectedState: string = 'all';
+  closedAtFrom: Date | null = null;
+  closedAtTo: Date | null = null;
   
   searchText: string = '';
   searchDebounce: Subject<string> = new Subject<string>();
@@ -251,13 +261,36 @@ export class RelationalDataGridComponent implements OnInit {
       ...filterParams
     };
     
+    // Add custom filters
+    if (this.selectedState && this.selectedState !== 'all') {
+      params.state_filter = this.selectedState;
+      console.log('Applying state filter:', this.selectedState);
+    }
+    
+    if (this.closedAtFrom) {
+      // Format date as YYYY-MM-DD to avoid timezone issues
+      const fromDate = new Date(this.closedAtFrom);
+      params.closed_at_from = fromDate.toISOString().split('T')[0];
+      console.log('Applying closed_at_from filter:', params.closed_at_from);
+    }
+    
+    if (this.closedAtTo) {
+      // Format date as YYYY-MM-DD to avoid timezone issues
+      const toDate = new Date(this.closedAtTo);
+      params.closed_at_to = toDate.toISOString().split('T')[0];
+      console.log('Applying closed_at_to filter:', params.closed_at_to);
+    }
+    
     const userId = this.selectedUser._id || '';
+    console.log('Request params:', params);
     
     this.githubService.getRelationalData(userId, params).subscribe({
       next: (response: RelationalDataResponse) => {
 
         this.relationshipData = response.data || [];
         this.relationshipFields = response.fields;
+        this.availableStates = response.availableStates || [];
+        
         if (this.relationshipData.length > 0) {
           this.currentRepo = this.relationshipData[0];
           this.setupGridData();
@@ -604,7 +637,10 @@ export class RelationalDataGridComponent implements OnInit {
   
   resetGrid(): void {
     this.searchText = '';
-    this.selectedFilterType = 'All';
+    this.selectedFilterType = 'Pull Requests';
+    this.selectedState = 'all';
+    this.closedAtFrom = null;
+    this.closedAtTo = null;
     this.pageIndex = 0;
     this.filterModel = {};
     this.sortModel = { field: 'created_at', sort: 'desc' };
@@ -636,6 +672,26 @@ export class RelationalDataGridComponent implements OnInit {
       this.gridApi.refreshCells();
       this.gridApi.refreshClientSideRowModel();
     }, 200);
+  }
+  
+  onStateFilterChange(event: any): void {
+    this.selectedState = event.value;
+    this.pageIndex = 0;
+    this.loadRelationalData();
+  }
+  
+  onDateRangeChange(): void {
+    console.log('Date range changed - From:', this.closedAtFrom, 'To:', this.closedAtTo);
+    this.pageIndex = 0;
+    this.loadRelationalData();
+  }
+  
+  resetFilters(): void {
+    this.selectedState = 'all';
+    this.closedAtFrom = null;
+    this.closedAtTo = null;
+    this.pageIndex = 0;
+    this.loadRelationalData();
   }
   
 }
