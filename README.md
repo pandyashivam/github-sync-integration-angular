@@ -41,6 +41,8 @@ This is the frontend Angular application for the GitHub Integration project. It 
 - RxJS & HttpClient for API communication
 - SCSS for styling
 
+https://www.loom.com/share/35b4c5ea1fc94a24960df9cc43035ca5?sid=827fa9be-f9d3-40e3-a3a9-ecd6f380144c
+
 
 ![image](https://github.com/user-attachments/assets/718ef59e-1471-4c2d-b7c4-d7d31ad6e421)
 ![image](https://github.com/user-attachments/assets/798afc49-b666-4e15-8e33-4acc8f8ba142)
