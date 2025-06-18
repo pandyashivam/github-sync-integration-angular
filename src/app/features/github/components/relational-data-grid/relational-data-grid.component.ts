@@ -13,7 +13,8 @@ import {
   ICellRendererParams,
   RowGroupingDisplayType,
   DateFilterModel,
-  TextFilterModel
+  TextFilterModel,
+  CellClickedEvent
 } from 'ag-grid-community';
 import { 
   GithubService, 
@@ -40,6 +41,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatBadgeModule } from '@angular/material/badge';
 import { Subject, debounceTime } from 'rxjs';
 import { AvatarCellComponent } from '../avatar-cell/avatar-cell.component';
+import { RelationalDetailComponent } from '../relational-detail/relational-detail.component';
 
 @Component({
   selector: 'app-relational-data-grid',
@@ -62,7 +64,6 @@ import { AvatarCellComponent } from '../avatar-cell/avatar-cell.component';
     MatTabsModule,
     MatChipsModule,
     MatBadgeModule,
-    AvatarCellComponent
   ],
   templateUrl: './relational-data-grid.component.html',
   styleUrl: './relational-data-grid.component.scss'
@@ -75,32 +76,20 @@ export class RelationalDataGridComponent implements OnInit {
   selectedRepository: any = null;
   repositories: any[] = [];
   
+  detailCellRenderer = RelationalDetailComponent;
+  components  = {
+    relationalDetailCellRenderer: RelationalDetailComponent
+  };
+  popupParent = document.body;
   relationshipData: RepoRelationship[] = [];
   currentRepo: RepoRelationship | null = null;
   
   columnDefs: ColDef[] = [];
   rowData: any[] = [];
   defaultColDef: ColDef = {
-    sortable: true,
-    filter: 'agTextColumnFilter',
     resizable: true,
     flex: 1,
-    minWidth: 100,
-    maxWidth: 600,
-    filterParams: {
-      buttons: ['reset', 'apply'],
-      closeOnApply: true,
-      filterOptions: [
-        'contains',
-        'notContains',
-        'equals',
-        'notEqual',
-        'startsWith',
-        'endsWith',
-        'empty'
-      ],
-      debounceMs: 200
-    }
+   
   };
   
   gridApi!: GridApi;
@@ -120,6 +109,12 @@ export class RelationalDataGridComponent implements OnInit {
   
   filterModel: any = {};
   sortModel: any = { field: 'created_at', sort: 'desc' };
+  
+  commitFields : any[] = [];
+  issueHistoryFields : any[] = [];
+  
+  // Context object for the grid
+  gridContext: any = {};
   
   constructor(private githubService: GithubService) {
     this.searchDebounce
@@ -205,6 +200,8 @@ export class RelationalDataGridComponent implements OnInit {
   
   onFilterTypeChange(event: any): void {
     this.selectedFilterType = event.value;
+    // Update the context when filter type changes
+    this.updateGridContext();
     this.loadRelationalData();
   }
   
@@ -353,19 +350,51 @@ export class RelationalDataGridComponent implements OnInit {
       return;
     }
 
+    this.commitFields = this.relationshipFields.commitFields;
+    this.issueHistoryFields = this.relationshipFields.issueHistoryFields;
+    
+    // Update the context with the current filter type and fields
+    this.updateGridContext();
+  
+    let columnDefs : any[] = [];
     if (this.selectedFilterType === 'Pull Requests') {
         this.rowData = this.currentRepo.pullRequests;
-        this.columnDefs = this.getColumnDefs(this.relationshipFields.pullRequestFields);
+        columnDefs = this.getColumnDefs(this.relationshipFields.pullRequestFields);
     } else if (this.selectedFilterType === 'Issues') {
         this.rowData = this.currentRepo.issues;
-        this.columnDefs = this.getColumnDefs(this.relationshipFields.issueFields);
+        columnDefs = this.getColumnDefs(this.relationshipFields.issueFields);
     }
-   
+
+    if(columnDefs.length > 0){
+      columnDefs[0].cellRenderer = 'agGroupCellRenderer';
+      columnDefs[0].cellClass = 'lock-pinned';
+      this.columnDefs = columnDefs;
+    }
+     
+    this.gridApi?.setGridOption('isRowMaster', (dataItem: any) => {
+      if (this.selectedFilterType === 'Pull Requests') {
+        return dataItem && dataItem.commitDetails && dataItem.commitDetails.length > 0;
+      } else if (this.selectedFilterType === 'Issues') {
+        return dataItem && dataItem.history && dataItem.history.length > 0;
+      }
+      return false;
+    });
   }
 
+  private updateGridContext(): void {
+    this.gridContext = {
+      filterType: this.selectedFilterType,
+      commitFields: this.commitFields,
+      issueHistoryFields: this.issueHistoryFields
+    };
+    
+    if (this.gridApi) {
+      this.gridApi.setGridOption('context', this.gridContext);
+    }
+  }
+  
   getColumnDefs(fields: any[]) {
     return fields.filter(field => {
-             // Skip fields that are complex objects based on first row's data
              if (this.rowData.length > 0) {
                const firstRowValue = this.rowData[0][field.field];
                if (firstRowValue && typeof firstRowValue === 'object' && !(firstRowValue instanceof Date)) {
@@ -380,21 +409,19 @@ export class RelationalDataGridComponent implements OnInit {
              headerName: this.formatHeaderName(field.field),
              sortable: true,
              floatingFilter: true,
-             // Add cell style function to highlight cells containing search text
              cellStyle: (params: any) => {
                if (this.searchText && params.value && typeof params.value === 'string') {
                  const searchLower = this.searchText.toLowerCase();
                  const valueLower = params.value.toString().toLowerCase();
                  
                  if (valueLower.includes(searchLower)) {
-                   return { backgroundColor: '#FFFFCC' }; // Light yellow highlight
+                   return { backgroundColor: '#FFFFCC' }; 
                  }
                }
                return null;
              }
            };
            
-           // Check if field is an avatar URL field
            const fieldName = field.field.toLowerCase();
            if (fieldName === 'avatar_url' || 
                fieldName === 'avatarurl' || 
@@ -500,8 +527,9 @@ export class RelationalDataGridComponent implements OnInit {
     this.gridApi = params.api;
     this.gridApi.sizeColumnsToFit();
     
-    // Set theme to legacy to avoid conflicts
     params.api.setGridOption('theme', 'legacy');
+    
+    params.api.setGridOption('context', this.gridContext);
   }
   
   onFilterChanged(event: FilterChangedEvent): void {
@@ -574,6 +602,14 @@ export class RelationalDataGridComponent implements OnInit {
       .replace(/([A-Z])/g, ' $1')
       .replace(/^./, str => str.toUpperCase())
       .trim();
+  }
+
+  onCellClicked(event: CellClickedEvent): void {
+    console.log('Cell clicked:', event);
+    setInterval(() => {
+      this.gridApi.refreshCells();
+      this.gridApi.refreshClientSideRowModel();
+    }, 200);
   }
   
 }

@@ -46,8 +46,7 @@ import { ActivatedRoute, Router } from '@angular/router';
     MatProgressSpinnerModule,
     MatPaginatorModule,
     MatCheckboxModule,
-    MatExpansionModule,
-    AvatarCellComponent,
+    MatExpansionModule
   ],
   templateUrl: './github-data.component.html',
   styleUrl: './github-data.component.scss'

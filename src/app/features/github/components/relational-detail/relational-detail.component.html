@@ -1,0 +1,25 @@
+<div class="detail-container">
+  <mat-card *ngIf="rowData && rowData.length > 0">
+    <mat-card-header>
+      <mat-card-title>{{ detailTitle }}</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <ag-grid-angular
+        class="ag-theme-alpine detail-grid"
+        [rowData]="rowData"
+        [columnDefs]="columnDefs"
+        [defaultColDef]="defaultColDef"
+        [pagination]="true"
+        [paginationAutoPageSize]="true"
+        [domLayout]="'normal'"
+        [animateRows]="true"
+        [rowHeight]="35"
+        style="width: 100%; height: 300px;">
+      </ag-grid-angular>
+    </mat-card-content>
+  </mat-card>
+
+  <div *ngIf="!rowData || rowData.length === 0" class="no-details">
+    <p>No {{ detailTitle.toLowerCase() }} available for this item.</p>
+  </div>
+</div>

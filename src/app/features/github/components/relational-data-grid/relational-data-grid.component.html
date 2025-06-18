@@ -59,28 +59,36 @@
   </div>
 
   <div *ngIf="!loading && currentRepo && rowData.length > 0" class="grid-container" [style]="{'height': gridHeight}">
-    <ag-grid-angular
-      class="ag-theme-alpine"
-      [rowData]="rowData"
-      [columnDefs]="columnDefs"
-      [defaultColDef]="defaultColDef"
-      [pagination]="false"
-      [rowSelection]="'multiple'"
-      [masterDetail]="true"
-      [detailRowHeight]="300"
-      [suppressRowClickSelection]="true"
-      [enableCellTextSelection]="true"
-      [suppressCellFocus]="true"
-      [domLayout]="'normal'"
-      [animateRows]="true"
-      [rowHeight]="35"
+    <ag-grid-angular style="width: 100%; height: 800px;"
+    class="ag-theme-alpine"
+    [rowData]="rowData"
+    [columnDefs]="columnDefs"
+    [defaultColDef]="defaultColDef"
+    [pagination]="false"
+    [rowSelection]="'multiple'"
+    [suppressRowClickSelection]="true"
+    [enableCellTextSelection]="true"
+    [suppressCellFocus]="true"
+    [domLayout]="'normal'"
+    [animateRows]="true"
+    [rowHeight]="35"
+    [autoSizeStrategy]="{
+      type: 'fitCellContents'
+    }"
+    (gridReady)="onGridReady($event)"
+    (filterChanged)="onFilterChanged($event)"
+    (sortChanged)="onSortChanged($event)"
+    (cellClicked)="onCellClicked($event)"
     
-      [autoSizeStrategy]="{
-        type: 'fitCellContents'
-      }"
-      (gridReady)="onGridReady($event)"
-      (filterChanged)="onFilterChanged($event)"
-      (sortChanged)="onSortChanged($event)">
+    [suppressContextMenu]="true"
+    [masterDetail]="true"
+    [detailCellRenderer]="detailCellRenderer"
+    [detailRowHeight]="350"
+    [detailRowAutoHeight]="false"
+    [context]="gridContext"
+    [components]="components"
+    [popupParent]="popupParent"
+    >
     </ag-grid-angular>
 
     <mat-paginator 

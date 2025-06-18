@@ -183,9 +183,9 @@
         
         <mat-paginator 
           [length]="collection.totalRecords"
-          [pageSize]="collectionPagination[i]?.pageSize || 10"
+          [pageSize]="collectionPagination[i].pageSize || 10"
           [pageSizeOptions]="[5, 10, 25, 50]"
-          [pageIndex]="collectionPagination[i]?.pageIndex || 0"
+          [pageIndex]="collectionPagination[i].pageIndex || 0"
           (page)="onCollectionPageChange($event, i, collection)">
         </mat-paginator>
       </mat-expansion-panel>
