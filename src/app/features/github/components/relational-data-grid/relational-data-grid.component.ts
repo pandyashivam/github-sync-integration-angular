@@ -479,7 +479,7 @@ export class RelationalDataGridComponent implements OnInit {
                buttons: ['apply', 'reset'],
                closeOnApply: true
              };
-           } else if (field.type === 'date' || field.field.includes('date') || field.field.includes('Date')) {
+           } else if (field.type === 'date' || field.field.includes('date') || field.field.includes('Date') || field.field.includes('closed_at')) {
              colDef.filter = 'agDateColumnFilter';
              colDef.filterParams = {
                buttons: ['apply', 'reset'],
