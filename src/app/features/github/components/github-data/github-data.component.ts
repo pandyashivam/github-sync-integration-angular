@@ -28,6 +28,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { Subject, debounceTime } from 'rxjs';
 import { AvatarCellComponent } from '../avatar-cell/avatar-cell.component';
 import { ActivatedRoute, Router } from '@angular/router';
+import { CustomTooltipComponent } from '../custom-tooltip/custom-tooltip.component';
 
 @Component({
   selector: 'app-github-data',
@@ -75,6 +76,11 @@ export class GithubDataComponent implements OnInit, OnDestroy {
     resizable: true,
     flex: 1,
     minWidth: 100,
+    maxWidth: 600,
+    tooltipValueGetter: (params) => {
+      return params.value ? params.value.toString() : '';
+    },
+    tooltipComponent: 'CustomTooltip',
     filterParams: {
       buttons: ['reset', 'apply'],
       closeOnApply: true,
@@ -90,6 +96,11 @@ export class GithubDataComponent implements OnInit, OnDestroy {
       debounceMs: 200
     }
   };
+  
+  components = {
+    CustomTooltip: CustomTooltipComponent
+  };
+  
   gridApi!: GridApi;
   gridHeight: string = 'calc(100vh - 150px)';
   
@@ -429,6 +440,7 @@ export class GithubDataComponent implements OnInit, OnDestroy {
             headerName: this.formatHeaderName(field.field),
             sortable: true,
             floatingFilter: true,
+            maxWidth: 600,
             // Add cell style function to highlight cells containing search text
             cellStyle: (params: any) => {
               if (this.searchText && params.value && typeof params.value === 'string') {

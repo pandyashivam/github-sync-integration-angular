@@ -14,7 +14,10 @@ import {
   RowGroupingDisplayType,
   DateFilterModel,
   TextFilterModel,
-  CellClickedEvent
+  CellClickedEvent,
+  ModuleRegistry,
+  themeQuartz,
+  GridOptions
 } from 'ag-grid-community';
 import { 
   GithubService, 
@@ -42,6 +45,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { Subject, debounceTime } from 'rxjs';
 import { AvatarCellComponent } from '../avatar-cell/avatar-cell.component';
 import { RelationalDetailComponent } from '../relational-detail/relational-detail.component';
+import { CustomTooltipComponent } from '../custom-tooltip/custom-tooltip.component';
 
 @Component({
   selector: 'app-relational-data-grid',
@@ -70,7 +74,6 @@ import { RelationalDetailComponent } from '../relational-detail/relational-detai
 })
 export class RelationalDataGridComponent implements OnInit {
   @ViewChild(AgGridAngular) agGrid!: AgGridAngular;
-  
   users: GithubUser[] = [];
   selectedUser: GithubUser | null = null;
   selectedRepository: any = null;
@@ -78,7 +81,8 @@ export class RelationalDataGridComponent implements OnInit {
   
   detailCellRenderer = RelationalDetailComponent;
   components  = {
-    relationalDetailCellRenderer: RelationalDetailComponent
+    relationalDetailCellRenderer: RelationalDetailComponent,
+    CustomTooltip: CustomTooltipComponent
   };
   popupParent = document.body;
   relationshipData: RepoRelationship[] = [];
@@ -87,9 +91,30 @@ export class RelationalDataGridComponent implements OnInit {
   columnDefs: ColDef[] = [];
   rowData: any[] = [];
   defaultColDef: ColDef = {
+    sortable: true,
+    filter: 'agTextColumnFilter',
     resizable: true,
     flex: 1,
-   
+    minWidth: 100,
+    maxWidth: 600,
+    tooltipValueGetter: (params) => {
+      return params.value ? params.value.toString() : '';
+    },
+    tooltipComponent: 'CustomTooltip',
+    filterParams: {
+      buttons: ['reset', 'apply'],
+      closeOnApply: true,
+      filterOptions: [
+        'contains',
+        'notContains',
+        'equals',
+        'notEqual',
+        'startsWith',
+        'endsWith',
+        'empty'
+      ],
+      debounceMs: 200
+    }
   };
   
   gridApi!: GridApi;
@@ -351,7 +376,7 @@ export class RelationalDataGridComponent implements OnInit {
     }
 
     this.commitFields = this.relationshipFields.commitFields;
-    this.issueHistoryFields = this.relationshipFields.issueHistoryFields;
+    this.issueHistoryFields = this.relationshipFields.historyFields;
     
     // Update the context with the current filter type and fields
     this.updateGridContext();
@@ -409,6 +434,7 @@ export class RelationalDataGridComponent implements OnInit {
              headerName: this.formatHeaderName(field.field),
              sortable: true,
              floatingFilter: true,
+             maxWidth: 600,
              cellStyle: (params: any) => {
                if (this.searchText && params.value && typeof params.value === 'string') {
                  const searchLower = this.searchText.toLowerCase();

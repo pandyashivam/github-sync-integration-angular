@@ -88,6 +88,7 @@
     <ag-grid-angular
       class="ag-theme-alpine"
       [rowData]="rowData"
+      [theme]="'legacy'"
       [columnDefs]="columnDefs"
       [defaultColDef]="defaultColDef"
       [pagination]="false"
@@ -98,6 +99,8 @@
       [domLayout]="'normal'"
       [animateRows]="true"
       [rowHeight]="35"
+      [tooltipShowDelay]="0"
+      [components]="components"
       [autoSizeStrategy]="{
         type: 'fitCellContents'
       }"
@@ -165,18 +168,17 @@
               resizable: true,
               flex: 1,
               minWidth: 100,
+              maxWidth: 600
             }"
             [pagination]="false"
             [rowSelection]="'multiple'"
             [suppressRowClickSelection]="true"
             [enableCellTextSelection]="true"
             [suppressCellFocus]="true"
-            
+            [tooltipShowDelay]="0"
+            [components]="components"
             [animateRows]="true"
             [rowHeight]="35"
-            [autoSizeStrategy]="{
-              type: 'fitCellContents'
-            }"
             (gridReady)="onCollectionGridReady($event, i)">
           </ag-grid-angular>
         </div>
