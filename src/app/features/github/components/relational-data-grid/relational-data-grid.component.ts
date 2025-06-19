@@ -265,11 +265,13 @@ export class RelationalDataGridComponent implements OnInit {
 
     const filterParams: any = this.getfilterParams();
     
-    // Add custom filters
     if (this.customFilters && this.customFilters.length > 0) {
       this.customFilters.forEach(filter => {
-        // Handle different operations based on field type
-        if (filter.type === 'date') {
+        if (filter.operation === 'in' && Array.isArray(filter.value)) {
+          filterParams[`${filter.field}_in`] = filter.value.join(',');
+        } else if (filter.operation === 'notIn' && Array.isArray(filter.value)) {
+          filterParams[`${filter.field}_notIn`] = filter.value.join(',');
+        } else if (filter.type === 'date') {
           if (filter.operation === 'between' && filter.secondValue) {
             filterParams[`${filter.field}_gte`] = new Date(filter.value).toISOString().split('T')[0];
             filterParams[`${filter.field}_lte`] = new Date(filter.secondValue).toISOString().split('T')[0];
@@ -318,11 +320,6 @@ export class RelationalDataGridComponent implements OnInit {
           } else if (filter.operation === 'empty') {
             filterParams[`${filter.field}_empty`] = true;
           }
-        } else if (filter.operation === 'in' && Array.isArray(filter.value)) {
-          // For user fields with multiple values
-          filterParams[`${filter.field}_in`] = filter.value.join(',');
-        } else if (filter.operation === 'notIn' && Array.isArray(filter.value)) {
-          filterParams[`${filter.field}_notIn`] = filter.value.join(',');
         }
       });
     }
@@ -338,21 +335,18 @@ export class RelationalDataGridComponent implements OnInit {
       ...filterParams
     };
     
-    // Add custom filters
     if (this.selectedState && this.selectedState !== 'all') {
       params.state_filter = this.selectedState;
       console.log('Applying state filter:', this.selectedState);
     }
     
     if (this.closedAtFrom) {
-      // Format date as YYYY-MM-DD to avoid timezone issues
       const fromDate = new Date(this.closedAtFrom);
       params.closed_at_from = fromDate.toISOString().split('T')[0];
       console.log('Applying closed_at_from filter:', params.closed_at_from);
     }
     
     if (this.closedAtTo) {
-      // Format date as YYYY-MM-DD to avoid timezone issues
       const toDate = new Date(this.closedAtTo);
       params.closed_at_to = toDate.toISOString().split('T')[0];
       console.log('Applying closed_at_to filter:', params.closed_at_to);
@@ -360,6 +354,17 @@ export class RelationalDataGridComponent implements OnInit {
     
     const userId = this.selectedUser._id || '';
     console.log('Request params:', params);
+    
+    const userLoginParams = Object.keys(params).filter(key => 
+      key.includes('user.login') || key.includes('login')
+    );
+    
+    if (userLoginParams.length > 0) {
+      console.log('User login params being sent to backend:', userLoginParams);
+      userLoginParams.forEach(key => {
+        console.log(`${key}:`, params[key]);
+      });
+    }
     
     this.githubService.getRelationalData(userId, params).subscribe({
       next: (response: RelationalDataResponse) => {
