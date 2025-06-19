@@ -6,7 +6,6 @@
       <div formArrayName="conditions">
         <div *ngFor="let condition of conditions.controls; let i = index" [formGroupName]="i" class="filter-condition">
           <div class="condition-row">
-            <!-- Field Select -->
             <mat-form-field appearance="outline">
               <mat-label>Field</mat-label>
               <mat-select formControlName="field" (selectionChange)="onFieldChange(i)">
@@ -16,7 +15,6 @@
               </mat-select>
             </mat-form-field>
             
-            <!-- Operation Select -->
             <mat-form-field appearance="outline">
               <mat-label>Operation</mat-label>
               <mat-select formControlName="operation" (selectionChange)="onOperationChange(i)">
@@ -26,7 +24,6 @@
               </mat-select>
             </mat-form-field>
             
-            <!-- Value Input - For String/Number fields -->
             <mat-form-field appearance="outline" *ngIf="!isUserField(condition.get('field')?.value) && 
                                                       !isStateField(condition.get('field')?.value) && 
                                                       !isDateField(condition.get('field')?.value) && 
@@ -35,7 +32,6 @@
               <input matInput formControlName="value">
             </mat-form-field>
             
-            <!-- Value Select - For State fields -->
             <mat-form-field appearance="outline" *ngIf="isStateField(condition.get('field')?.value) && 
                                                       condition.get('operation')?.value !== 'empty'">
               <mat-label>State</mat-label>
@@ -46,7 +42,6 @@
               </mat-select>
             </mat-form-field>
             
-            <!-- Value Select - For User fields -->
             <mat-form-field appearance="outline" class="user-select-field" *ngIf="isUserField(condition.get('field')?.value) && 
                                                       condition.get('operation')?.value !== 'empty'">
               <mat-label>Users</mat-label>
@@ -69,7 +64,6 @@
               </mat-hint>
             </mat-form-field>
             
-            <!-- Date Input - For Date fields -->
             <ng-container *ngIf="isDateField(condition.get('field')?.value) && condition.get('operation')?.value !== 'empty'">
               <mat-form-field appearance="outline" *ngIf="condition.get('operation')?.value !== 'between'">
                 <mat-label>Date</mat-label>
@@ -78,7 +72,6 @@
                 <mat-datepicker #picker></mat-datepicker>
               </mat-form-field>
               
-              <!-- Date Range - For Between operation -->
               <ng-container *ngIf="condition.get('operation')?.value === 'between'">
                 <mat-form-field appearance="outline">
                   <mat-label>From</mat-label>
@@ -96,7 +89,6 @@
               </ng-container>
             </ng-container>
             
-            <!-- Remove Button -->
             <button mat-icon-button color="warn" type="button" (click)="removeCondition(i)" aria-label="Remove filter">
               <mat-icon>delete</mat-icon>
             </button>
@@ -104,7 +96,6 @@
         </div>
       </div>
       
-      <!-- Add Filter Button -->
       <button mat-stroked-button color="primary" type="button" (click)="addCondition()">
         <mat-icon>add</mat-icon> Add Filter
       </button>

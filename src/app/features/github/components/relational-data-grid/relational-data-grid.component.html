@@ -55,7 +55,6 @@
     
     <div class="custom-filters">
       <div class="filter-row">
-        <!-- State filter -->
         <mat-form-field appearance="outline" class="filter-field" style="max-width: 200px;">
           <mat-label>State</mat-label>
           <mat-select [(ngModel)]="selectedState" (selectionChange)="onStateFilterChange($event)">
@@ -66,7 +65,6 @@
           </mat-select>
         </mat-form-field>
         
-        <!-- Date range filter for closed_at -->
         <mat-form-field appearance="outline" style="max-width: 200px;" class="filter-field" *ngIf="selectedState === 'closed'">
           <mat-label>Closed From</mat-label>
           <input matInput [matDatepicker]="fromPicker" [(ngModel)]="closedAtFrom" (dateChange)="onDateRangeChange()">
@@ -90,7 +88,6 @@
         </button>
       </div>
       
-      <!-- Display active custom filters as chips -->
       <div class="active-filters" *ngIf="customFilters && customFilters.length > 0">
         <span class="filter-label">Active filters:</span>
         <mat-chip-listbox>

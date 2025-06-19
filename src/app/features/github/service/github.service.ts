@@ -324,11 +324,14 @@ export class GithubService {
       return throwError(() => new Error('Field path is required'));
     }
     
-    const params = new HttpParams()
-      .set('repoId', repoId || '')
-      .set('filterType', filterType || 'Pull Requests')
-      .set('fieldPath', fieldPath);
+    var params = {
+      repoId: repoId || '', 
+      filterType: filterType || 'Pull Requests',
+      fieldPath: fieldPath
+    }
+
+    console.log('Service getDistinctFieldValues params:', params);
       
-    return this.httpService.get<DistinctFieldValuesResponse>(`/datagrid/distinct-values/${userId}`, { params });
+    return this.httpService.get<DistinctFieldValuesResponse>(`/datagrid/distinct-values/${userId}`, params);
   }
 }

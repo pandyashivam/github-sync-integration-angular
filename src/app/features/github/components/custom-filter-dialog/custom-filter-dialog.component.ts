@@ -80,8 +80,18 @@ export class CustomFilterDialogComponent implements OnInit {
   ];
   
   availableStates: string[] = ['all', 'open', 'closed'];
-  userOptions: {[key: string]: any[]} = {}; // Store user options by field name
-  loadingFields: {[key: string]: boolean} = {}; // Track loading state by field
+  userOptions: {[key: string]: any[]} = {};
+  loadingFields: {[key: string]: boolean} = {};
+  excludeFields: string[] = [
+    'user',
+    'user.id',
+    'user.avatar_url',
+    'commits',
+    'repositoryId',
+    'type',
+    'commitDetails',
+    'history',
+  ];
   
   constructor(
     private dialogRef: MatDialogRef<CustomFilterDialogComponent>,
@@ -95,10 +105,9 @@ export class CustomFilterDialogComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.fields = this.data.fields || [];
+    this.fields = this.data.fields.filter((field: any) => !this.excludeFields.includes(field.field)) || [];
     this.availableStates = this.data.availableStates || ['all', 'open', 'closed'];
     
-    // If there are existing filters, populate the form
     if (this.data.existingFilters && this.data.existingFilters.length > 0) {
       this.data.existingFilters.forEach((filter: FilterCondition) => {
         this.addCondition(filter);
@@ -118,16 +127,14 @@ export class CustomFilterDialogComponent implements OnInit {
       operation: [condition?.operation || ''],
       value: [condition?.value || ''],
       type: [condition?.type || ''],
-      secondValue: [condition?.secondValue || ''] // For date ranges
+      secondValue: [condition?.secondValue || '']
     });
 
-    // If a field is already selected, set the field type
     if (condition?.field) {
       const fieldInfo = this.fields.find(f => f.field === condition.field);
       if (fieldInfo) {
         conditionGroup.patchValue({ type: fieldInfo.type });
         
-        // If it's a user field, load user options
         if (this.isUserField(condition.field)) {
           this.loadUserOptions(condition.field);
         }
@@ -153,7 +160,6 @@ export class CustomFilterDialogComponent implements OnInit {
         value: ''
       });
       
-      // If it's a user field, load user options
       if (this.isUserField(fieldName)) {
         this.loadUserOptions(fieldName);
       }
@@ -198,15 +204,12 @@ export class CustomFilterDialogComponent implements OnInit {
   }
 
   loadUserOptions(fieldName: string): void {
-    // If we already have loaded options for this field, don't reload
     if (this.userOptions[fieldName]) {
       return;
     }
     
-    // Mark this field as loading
     this.loadingFields[fieldName] = true;
     
-    // Make sure fieldName is not empty
     if (!fieldName) {
       console.error('Field name is empty');
       this.loadingFields[fieldName] = false;
@@ -215,7 +218,6 @@ export class CustomFilterDialogComponent implements OnInit {
     
     console.log(`Loading user options for field: ${fieldName}`);
     
-    // For user.login fields, we need to send the full field path
     const fieldPath = fieldName;
     
     this.githubService.getDistinctFieldValues(
@@ -256,7 +258,6 @@ export class CustomFilterDialogComponent implements OnInit {
     const condition = this.conditions.at(index);
     const operation = condition.get('operation')?.value;
     
-    // Reset value when operation changes
     if (operation === 'empty') {
       condition.patchValue({ value: 'true' });
     } else {
@@ -273,7 +274,6 @@ export class CustomFilterDialogComponent implements OnInit {
         type: control.get('type')?.value
       };
       
-      // For date ranges, include the second value
       if (this.isDateField(filter.field) && filter.operation === 'between') {
         filter.secondValue = control.get('secondValue')?.value;
       }
